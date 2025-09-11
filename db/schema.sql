@@ -76,12 +76,86 @@ CREATE TABLE IF NOT EXISTS patients (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Specimen table with ALL functionality
+-- Animals table for animal research LIMS
+CREATE TABLE IF NOT EXISTS animals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  animal_number INTEGER UNIQUE,
+  species VARCHAR(255) NOT NULL,
+  strain VARCHAR(255),
+  sex VARCHAR(10) DEFAULT 'Unknown' CHECK (sex IN ('M', 'F', 'Unknown')),
+  birth_date DATE,
+  death_date DATE,
+  source VARCHAR(255),
+  genotype VARCHAR(500),
+  housing_id UUID,
+  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'deceased', 'transferred', 'retired')),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  -- Breeding information
+  dam_id UUID REFERENCES animals(id),
+  sire_id UUID REFERENCES animals(id),
+  -- Additional tracking fields
+  identification_method VARCHAR(50) DEFAULT 'ear_tag',
+  identification_number VARCHAR(100),
+  vendor VARCHAR(255),
+  arrival_date DATE,
+  -- Legacy identification fields (for compatibility)
+  ear_tag VARCHAR(50),
+  tattoo VARCHAR(50),
+  microchip VARCHAR(50),
+  vendor_lot VARCHAR(50),
+  acquisition_date DATE
+);
+
+-- Animal weights table for tracking weight history
+CREATE TABLE IF NOT EXISTS animal_weights (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  animal_id UUID NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
+  weight_grams DECIMAL(8,2) NOT NULL,
+  body_condition_score INTEGER CHECK (body_condition_score BETWEEN 1 AND 5),
+  measurement_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  measured_by VARCHAR(255),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Animal observations table for health monitoring
+CREATE TABLE IF NOT EXISTS animal_observations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  animal_id UUID NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
+  observation_type VARCHAR(100) NOT NULL,
+  finding VARCHAR(255) NOT NULL,
+  severity VARCHAR(20) CHECK (severity IN ('low', 'medium', 'high')),
+  description TEXT,
+  action_taken TEXT,
+  follow_up_required BOOLEAN DEFAULT false,
+  observation_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  observed_by VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Housing table for animal housing management
+CREATE TABLE IF NOT EXISTS housing (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  housing_number VARCHAR(100),
+  location VARCHAR(255) NOT NULL,
+  cage_type VARCHAR(100),
+  capacity INTEGER,
+  current_occupancy INTEGER DEFAULT 0,
+  environmental_conditions TEXT,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Specimen table with ALL functionality (updated for animal research)
 CREATE TABLE IF NOT EXISTS specimens (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   specimen_number INTEGER UNIQUE,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   patient_id UUID REFERENCES patients(id) ON DELETE CASCADE,
+  animal_id UUID REFERENCES animals(id) ON DELETE CASCADE,
   tube_id VARCHAR(255),
   extracted BOOLEAN DEFAULT FALSE,
   initial_quantity DECIMAL(10, 2),
@@ -94,6 +168,10 @@ CREATE TABLE IF NOT EXISTS specimens (
   date_collected DATE,
   collection_category VARCHAR(255),
   extraction_method VARCHAR(255),
+  -- Animal-specific specimen fields
+  collection_timepoint VARCHAR(100),
+  anatomical_site VARCHAR(255),
+  -- Legacy human clinical fields (kept for compatibility but not used in UI)
   nucleated_cells TEXT,
   cell_numbers INTEGER,
   percentage_segs DECIMAL(5, 2),
@@ -288,6 +366,7 @@ CREATE SEQUENCE IF NOT EXISTS collaborator_number_seq;
 CREATE SEQUENCE IF NOT EXISTS project_number_seq; 
 CREATE SEQUENCE IF NOT EXISTS specimen_number_seq;
 CREATE SEQUENCE IF NOT EXISTS patient_number_seq;
+CREATE SEQUENCE IF NOT EXISTS animal_number_seq;
 CREATE SEQUENCE IF NOT EXISTS protocol_id_seq;
 CREATE SEQUENCE IF NOT EXISTS inventory_id_seq;
 CREATE SEQUENCE IF NOT EXISTS experiment_id_seq;
@@ -298,6 +377,7 @@ SELECT setval('collaborator_number_seq', 1, false);
 SELECT setval('project_number_seq', 1, false);
 SELECT setval('specimen_number_seq', 1, false);
 SELECT setval('patient_number_seq', 1, false);
+SELECT setval('animal_number_seq', 1, false);
 SELECT setval('protocol_id_seq', 1, false);
 SELECT setval('inventory_id_seq', 1, false);
 SELECT setval('experiment_id_seq', 1, false);
@@ -330,6 +410,8 @@ BEGIN
       SELECT COALESCE(MAX(specimen_number), 0) + 1 INTO next_val FROM specimens WHERE specimen_number > 0;
     WHEN 'patient' THEN
       SELECT COALESCE(MAX(patient_number), 0) + 1 INTO next_val FROM patients WHERE patient_number > 0;
+    WHEN 'animal' THEN
+      SELECT COALESCE(MAX(animal_number), 0) + 1 INTO next_val FROM animals WHERE animal_number > 0;
     WHEN 'protocol' THEN
       SELECT COALESCE(MAX(protocol_id), 0) + 1 INTO next_val FROM protocols WHERE protocol_id > 0;
     WHEN 'inventory' THEN
@@ -337,7 +419,7 @@ BEGIN
     WHEN 'experiment' THEN
       SELECT COALESCE(MAX(experiment_id), 0) + 1 INTO next_val FROM experiments WHERE experiment_id > 0;
     ELSE
-      RAISE EXCEPTION 'Invalid entity type: %. Valid types: collaborator, project, specimen, patient, protocol, inventory, experiment', entity_type;
+      RAISE EXCEPTION 'Invalid entity type: %. Valid types: collaborator, project, specimen, patient, animal, protocol, inventory, experiment', entity_type;
   END CASE;
   
   RETURN next_val;
@@ -359,6 +441,8 @@ BEGIN
       SELECT COALESCE(MAX(specimen_number), 0) + 1 INTO next_val FROM specimens WHERE specimen_number > 0;
     WHEN 'patient' THEN
       SELECT COALESCE(MAX(patient_number), 0) + 1 INTO next_val FROM patients WHERE patient_number > 0;
+    WHEN 'animal' THEN
+      SELECT COALESCE(MAX(animal_number), 0) + 1 INTO next_val FROM animals WHERE animal_number > 0;
     WHEN 'protocol' THEN
       SELECT COALESCE(MAX(protocol_id), 0) + 1 INTO next_val FROM protocols WHERE protocol_id > 0;
     WHEN 'inventory' THEN
@@ -366,7 +450,7 @@ BEGIN
     WHEN 'experiment' THEN
       SELECT COALESCE(MAX(experiment_id), 0) + 1 INTO next_val FROM experiments WHERE experiment_id > 0;
     ELSE
-      RAISE EXCEPTION 'Invalid entity type: %. Valid types: collaborator, project, specimen, patient, protocol, inventory, experiment', entity_type;
+      RAISE EXCEPTION 'Invalid entity type: %. Valid types: collaborator, project, specimen, patient, animal, protocol, inventory, experiment', entity_type;
   END CASE;
   
   RETURN next_val;
@@ -749,6 +833,8 @@ CREATE TRIGGER update_protocol_timestamp BEFORE UPDATE ON protocols FOR EACH ROW
 CREATE TRIGGER update_inventory_timestamp BEFORE UPDATE ON inventory FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_experiments_timestamp BEFORE UPDATE ON experiments FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_system_options_timestamp BEFORE UPDATE ON system_options FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_animals_timestamp BEFORE UPDATE ON animals FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_housing_timestamp BEFORE UPDATE ON housing FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 
 -- Metadata change logging function
 CREATE OR REPLACE FUNCTION log_specimen_metadata_changes()
@@ -792,6 +878,7 @@ CREATE INDEX IF NOT EXISTS idx_collaborators_number ON collaborators(collaborato
 CREATE INDEX IF NOT EXISTS idx_projects_number ON projects(project_number);
 CREATE INDEX IF NOT EXISTS idx_specimens_number ON specimens(specimen_number);
 CREATE INDEX IF NOT EXISTS idx_patients_number ON patients(patient_number);
+CREATE INDEX IF NOT EXISTS idx_animals_number ON animals(animal_number);
 CREATE INDEX IF NOT EXISTS idx_protocols_id ON protocols(protocol_id);
 
 -- Metadata and JSON indexes
@@ -823,13 +910,23 @@ CREATE INDEX IF NOT EXISTS idx_system_options_category_active ON system_options(
 -- Critical foreign key indexes for JOIN performance
 CREATE INDEX IF NOT EXISTS idx_specimens_project_id ON specimens(project_id);
 CREATE INDEX IF NOT EXISTS idx_specimens_patient_id ON specimens(patient_id);
+CREATE INDEX IF NOT EXISTS idx_specimens_animal_id ON specimens(animal_id);
 CREATE INDEX IF NOT EXISTS idx_projects_collaborator_id ON projects(collaborator_id);
+CREATE INDEX IF NOT EXISTS idx_animals_housing_id ON animals(housing_id);
+CREATE INDEX IF NOT EXISTS idx_animals_dam_id ON animals(dam_id);
+CREATE INDEX IF NOT EXISTS idx_animals_sire_id ON animals(sire_id);
+CREATE INDEX IF NOT EXISTS idx_animal_weights_animal_id ON animal_weights(animal_id);
+CREATE INDEX IF NOT EXISTS idx_animal_observations_animal_id ON animal_observations(animal_id);
 
 -- Search field indexes for WHERE clause performance
 CREATE INDEX IF NOT EXISTS idx_projects_specimen_type ON projects(specimen_type);
 CREATE INDEX IF NOT EXISTS idx_projects_disease ON projects(disease);
 CREATE INDEX IF NOT EXISTS idx_specimens_tube_id ON specimens(tube_id);
 CREATE INDEX IF NOT EXISTS idx_specimens_specimen_site ON specimens(specimen_site);
+CREATE INDEX IF NOT EXISTS idx_animals_species ON animals(species);
+CREATE INDEX IF NOT EXISTS idx_animals_strain ON animals(strain);
+CREATE INDEX IF NOT EXISTS idx_animals_status ON animals(status);
+CREATE INDEX IF NOT EXISTS idx_animals_sex ON animals(sex);
 
 -- Composite indexes for common search patterns
 CREATE INDEX IF NOT EXISTS idx_specimens_project_specimen_type ON specimens(project_id) INCLUDE (specimen_number);
