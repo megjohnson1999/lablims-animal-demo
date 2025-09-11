@@ -45,7 +45,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { protocolAPI, specimenAPI, experimentsAPI, projectAPI } from '../../services/api';
+import { protocolAPI, specimenAPI, experimentsAPI, studiesAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 
 const ExperimentForm = () => {
@@ -140,7 +140,7 @@ const ExperimentForm = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await projectAPI.getAll('?limit=1000');
+      const response = await studiesAPI.getAll('?limit=1000');
       setProjects(response.data.projects || []);
     } catch (err) {
       console.error('Error fetching projects:', err);
@@ -152,7 +152,7 @@ const ExperimentForm = () => {
     try {
       if (projectId) {
         // Fetch specimens for specific project
-        const response = await projectAPI.getSpecimens(projectId);
+        const response = await specimenAPI.getAll(`?project_id=${projectId}&limit=1000`);
         setSpecimens(response.data || []);
       } else {
         // Fetch all specimens (for edit mode or if no project selected)

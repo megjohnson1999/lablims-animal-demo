@@ -7,8 +7,8 @@ const logger = require('../utils/logger');
 
 // @route   GET api/audit
 // @desc    Get recent audit logs
-// @access  Private (admin and lab_manager)
-router.get('/', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) => {
+// @access  Private (admin and facility_manager)
+router.get('/', [auth, roleCheck(['admin', 'facility_manager'])], async (req, res) => {
   try {
     const result = await db.query(
       `SELECT a.*, u.username
@@ -27,8 +27,8 @@ router.get('/', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) =>
 
 // @route   GET api/audit/user/:id
 // @desc    Get audit logs for a specific user
-// @access  Private (admin and lab_manager)
-router.get('/user/:id', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) => {
+// @access  Private (admin and facility_manager)
+router.get('/user/:id', [auth, roleCheck(['admin', 'facility_manager'])], async (req, res) => {
   try {
     const result = await db.query(
       `SELECT a.*, u.username
@@ -48,8 +48,8 @@ router.get('/user/:id', [auth, roleCheck(['admin', 'lab_manager'])], async (req,
 
 // @route   GET api/audit/:table/:id
 // @desc    Get audit logs for a specific record
-// @access  Private (admin and lab_manager)
-router.get('/:table/:id', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) => {
+// @access  Private (admin and facility_manager)
+router.get('/:table/:id', [auth, roleCheck(['admin', 'facility_manager'])], async (req, res) => {
   try {
     const result = await db.query(
       `SELECT a.*, u.username

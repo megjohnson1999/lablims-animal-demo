@@ -23,7 +23,6 @@ import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
   Folder as FolderIcon,
-  Person as PersonIcon,
   Science as ScienceIcon,
   Label as LabelIcon,
   Settings as SettingsIcon,
@@ -34,7 +33,11 @@ import {
   Biotech as ExperimentIcon,
   Storage as MetadataIcon,
   Description as DocumentIcon,
-  AdminPanelSettings as AdminIcon
+  AdminPanelSettings as AdminIcon,
+  Pets as AnimalIcon,
+  Psychology as StudyIcon,
+  Group as GroupIcon,
+  Home as HousingIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -81,18 +84,16 @@ const Layout = () => {
   };
 
   // Check if user can manage users
-  const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'lab_manager';
+  const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'facility_manager';
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Collaborators', icon: <PeopleIcon />, path: '/collaborators' },
-    { text: 'Projects', icon: <FolderIcon />, path: '/projects' },
-    { text: 'Patients', icon: <PersonIcon />, path: '/patients' },
-    { text: 'Specimens', icon: <ScienceIcon />, path: '/specimens' },
-    { text: 'Metadata', icon: <MetadataIcon />, path: '/metadata' },
-    { text: 'Protocols', icon: <ProtocolIcon />, path: '/protocols' },
-    { text: 'Documents', icon: <DocumentIcon />, path: '/documents' },
-    { text: 'Experiments', icon: <ExperimentIcon />, path: '/experiments' },
+    { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
+    { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
+    { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
+    { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
+    { text: 'Biological Samples', icon: <ScienceIcon />, path: '/biological-samples' },
+    { text: 'Procedures', icon: <ProtocolIcon />, path: '/procedures' },
     { text: 'Inventory', icon: <InventoryIcon />, path: '/inventory' },
     { text: 'Labels', icon: <LabelIcon />, path: '/labels' },
     ...(canManageUsers ? [
@@ -104,7 +105,7 @@ const Layout = () => {
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          Pathogen DB
+          Animal Research LIMS
         </Typography>
       </Toolbar>
       <Divider />
@@ -146,7 +147,7 @@ const Layout = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Pathogen Discovery Database
+            Animal Research LIMS
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center' }}>

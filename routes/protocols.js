@@ -696,7 +696,7 @@ router.post(
   '/',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('name', 'Protocol name is required').not().isEmpty(),
       check('required_reagents', 'Required reagents must be an array').optional().isArray()
@@ -812,7 +812,7 @@ router.put(
   '/:id',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('name', 'Protocol name is required').not().isEmpty(),
       check('required_reagents', 'Required reagents must be an array').optional().isArray()
@@ -1032,7 +1032,7 @@ router.delete('/:id', [auth, roleCheck(['admin'])], async (req, res) => {
 // @route   POST api/protocols/:id/duplicate
 // @desc    Duplicate a protocol with new version
 // @access  Private (admin/editor only)
-router.post('/:id/duplicate', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.post('/:id/duplicate', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   const { name } = req.body;
   
   const client = await db.getClient();
@@ -1125,7 +1125,7 @@ router.post('/:id/duplicate', [auth, roleCheck(['admin', 'lab_manager', 'lab_tec
 // @route   POST api/protocols/extract
 // @desc    Upload document and extract protocol data
 // @access  Private (admin/editor only)
-router.post('/extract', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], upload.single('document'), async (req, res) => {
+router.post('/extract', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], upload.single('document'), async (req, res) => {
   const client = await db.getClient();
   
   try {
@@ -1267,7 +1267,7 @@ router.get('/extraction-status/:jobId', auth, async (req, res) => {
 // @access  Private (admin/editor only)
 router.post('/from-extraction', [
   auth, 
-  roleCheck(['admin', 'lab_manager', 'lab_technician']),
+  roleCheck(['admin', 'facility_manager', 'technician']),
   [
     check('job_id', 'Extraction job ID is required').not().isEmpty(),
     check('name', 'Protocol name is required').not().isEmpty(),

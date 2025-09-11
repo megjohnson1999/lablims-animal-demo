@@ -173,10 +173,10 @@ router.get('/:id', auth, async (req, res) => {
 
 // @route   POST /api/animals
 // @desc    Create new animal
-// @access  Private (admin, lab_manager, lab_technician)
+// @access  Private (admin, facility_manager, technician)
 router.post('/', [
   auth,
-  roleCheck(['admin', 'lab_manager', 'lab_technician']),
+  roleCheck(['admin', 'facility_manager', 'technician']),
   [
     check('species', 'Species is required').notEmpty(),
     check('sex', 'Sex must be M, F, or Unknown').optional().isIn(['M', 'F', 'Unknown']),
@@ -321,10 +321,10 @@ router.get('/:id/weights', auth, async (req, res) => {
 
 // @route   POST /api/animals/:id/weights
 // @desc    Add weight record for an animal
-// @access  Private (admin, lab_manager, lab_technician)
+// @access  Private (admin, facility_manager, technician)
 router.post('/:id/weights', [
   auth,
-  roleCheck(['admin', 'lab_manager', 'lab_technician']),
+  roleCheck(['admin', 'facility_manager', 'technician']),
   [
     check('weight_grams', 'Weight is required').notEmpty().isNumeric(),
     check('body_condition_score', 'Body condition score must be between 1 and 5').optional().isInt({ min: 1, max: 5 }),
@@ -393,10 +393,10 @@ router.get('/:id/observations', auth, async (req, res) => {
 
 // @route   POST /api/animals/:id/observations
 // @desc    Add observation for an animal
-// @access  Private (admin, lab_manager, lab_technician)
+// @access  Private (admin, facility_manager, technician)
 router.post('/:id/observations', [
   auth,
-  roleCheck(['admin', 'lab_manager', 'lab_technician']),
+  roleCheck(['admin', 'facility_manager', 'technician']),
   [
     check('observation_type', 'Observation type is required').notEmpty(),
     check('finding', 'Finding is required').notEmpty(),

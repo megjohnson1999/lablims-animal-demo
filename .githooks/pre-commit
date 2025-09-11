@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Pre-commit hook to remind about schema updates
+# This ensures db/schema.sql stays current with any database changes
+
+echo "🔍 Checking for database-related changes..."
+
+# Check if any database-related files are being committed
+DB_FILES_CHANGED=$(git diff --cached --name-only | grep -E "(routes/|db/migrations/|schema|sql)" | head -10)
+
+if [ ! -z "$DB_FILES_CHANGED" ]; then
+    echo ""
+    echo "⚠️  DATABASE-RELATED FILES DETECTED IN COMMIT:"
+    echo "$DB_FILES_CHANGED"
+    echo ""
+    echo "📋 REMINDER CHECKLIST:"
+    echo "┌─────────────────────────────────────────────────────────────────┐"
+    echo "│ □ Have you updated db/schema.sql with any new tables/columns?   │"
+    echo "│ □ Are all new tables included in the core schema?               │"
+    echo "│ □ Are all new indexes and triggers added to schema.sql?         │"
+    echo "│ □ Did you test that 'psql -f db/schema.sql' creates a working   │"
+    echo "│   database with all your changes?                               │"
+    echo "│ □ Are ID generation functions updated for new entities?         │"
+    echo "└─────────────────────────────────────────────────────────────────┘"
+    echo ""
+    echo "🎯 GOAL: Anyone who pulls from GitHub should be able to run:"
+    echo "   psql -f db/schema.sql"
+    echo "   and get a fully working Animal Research LIMS"
+    echo ""
+    
+    # Check if schema.sql was modified
+    SCHEMA_MODIFIED=$(echo "$DB_FILES_CHANGED" | grep "db/schema.sql")
+    
+    if [ -z "$SCHEMA_MODIFIED" ]; then
+        echo "❌ WARNING: You're committing database changes but db/schema.sql"
+        echo "   was not modified. This might break single-command deployment!"
+        echo ""
+        echo "Type 'yes' if you're sure this is intentional, or 'no' to abort:"
+        read -r response
+        
+        if [ "$response" != "yes" ]; then
+            echo "❌ Commit aborted. Please update db/schema.sql first."
+            exit 1
+        fi
+    else
+        echo "✅ Good! db/schema.sql was updated along with your changes."
+    fi
+    
+    echo ""
+    echo "🚀 Continuing with commit..."
+fi
+
+exit 0

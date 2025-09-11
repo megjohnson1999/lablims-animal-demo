@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   first_name VARCHAR(255),
   last_name VARCHAR(255),
-  role VARCHAR(50) NOT NULL DEFAULT 'researcher' CHECK (role IN ('admin', 'lab_manager', 'lab_technician', 'bioinformatician', 'researcher')),
+  role VARCHAR(50) NOT NULL DEFAULT 'researcher' CHECK (role IN ('admin', 'facility_manager', 'veterinarian', 'researcher', 'technician')),
   active BOOLEAN DEFAULT TRUE,
   force_password_change BOOLEAN DEFAULT FALSE,
   failed_login_attempts INTEGER DEFAULT 0,
@@ -147,6 +147,120 @@ CREATE TABLE IF NOT EXISTS housing (
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Experimental studies table
+CREATE TABLE IF NOT EXISTS experimental_studies (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  study_number INTEGER UNIQUE,
+  study_name VARCHAR(255) NOT NULL,
+  description TEXT,
+  principal_investigator VARCHAR(255) NOT NULL,
+  status VARCHAR(50) DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'completed', 'paused', 'terminated')),
+  study_type VARCHAR(100),
+  objective TEXT,
+  start_date DATE,
+  planned_end_date DATE,
+  actual_end_date DATE,
+  iacuc_protocol_number VARCHAR(100),
+  species_required VARCHAR(255),
+  total_animals_planned INTEGER,
+  notes TEXT,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Experimental groups table
+CREATE TABLE IF NOT EXISTS experimental_groups (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  group_number INTEGER UNIQUE,
+  study_id UUID NOT NULL REFERENCES experimental_studies(id) ON DELETE CASCADE,
+  group_name VARCHAR(255) NOT NULL,
+  group_type VARCHAR(50) DEFAULT 'treatment' CHECK (group_type IN ('control', 'treatment', 'sham', 'baseline')),
+  description TEXT,
+  target_animal_count INTEGER,
+  current_animal_count INTEGER DEFAULT 0,
+  treatment_description TEXT,
+  dosage_regimen TEXT,
+  schedule_description TEXT,
+  start_date DATE,
+  end_date DATE,
+  status VARCHAR(50) DEFAULT 'recruiting' CHECK (status IN ('recruiting', 'active', 'completed', 'terminated')),
+  randomization_method VARCHAR(100),
+  inclusion_criteria TEXT,
+  exclusion_criteria TEXT,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Animal group assignments table
+CREATE TABLE IF NOT EXISTS animal_group_assignments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  animal_id UUID NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
+  group_id UUID NOT NULL REFERENCES experimental_groups(id) ON DELETE CASCADE,
+  assignment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  assigned_by UUID REFERENCES users(id),
+  randomization_number INTEGER,
+  baseline_weight DECIMAL(8,2),
+  baseline_age_days INTEGER,
+  assignment_notes TEXT,
+  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'withdrawn', 'completed', 'deceased')),
+  withdrawal_date DATE,
+  withdrawal_reason TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(animal_id, group_id)
+);
+
+-- Group treatments/interventions tracking
+CREATE TABLE IF NOT EXISTS group_treatments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  group_id UUID NOT NULL REFERENCES experimental_groups(id) ON DELETE CASCADE,
+  treatment_name VARCHAR(255) NOT NULL,
+  treatment_type VARCHAR(100),
+  description TEXT,
+  dosage VARCHAR(255),
+  route VARCHAR(100),
+  frequency VARCHAR(255),
+  duration_days INTEGER,
+  start_date DATE,
+  end_date DATE,
+  administered_by VARCHAR(255),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Group measurements/data collection points
+CREATE TABLE IF NOT EXISTS group_measurements (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  group_id UUID NOT NULL REFERENCES experimental_groups(id) ON DELETE CASCADE,
+  measurement_name VARCHAR(255) NOT NULL,
+  measurement_type VARCHAR(100),
+  description TEXT,
+  collection_schedule VARCHAR(255),
+  measurement_units VARCHAR(50),
+  normal_range_min DECIMAL(10,4),
+  normal_range_max DECIMAL(10,4),
+  methodology TEXT,
+  equipment_used TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Individual animal measurements within groups
+CREATE TABLE IF NOT EXISTS animal_group_measurements (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  assignment_id UUID NOT NULL REFERENCES animal_group_assignments(id) ON DELETE CASCADE,
+  measurement_id UUID NOT NULL REFERENCES group_measurements(id) ON DELETE CASCADE,
+  measurement_date DATE NOT NULL,
+  measurement_time TIME,
+  value DECIMAL(12,4),
+  text_value TEXT,
+  measured_by VARCHAR(255),
+  quality_flag VARCHAR(50) CHECK (quality_flag IN ('good', 'questionable', 'poor', 'excluded')),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Specimen table with ALL functionality (updated for animal research)
@@ -370,6 +484,8 @@ CREATE SEQUENCE IF NOT EXISTS animal_number_seq;
 CREATE SEQUENCE IF NOT EXISTS protocol_id_seq;
 CREATE SEQUENCE IF NOT EXISTS inventory_id_seq;
 CREATE SEQUENCE IF NOT EXISTS experiment_id_seq;
+CREATE SEQUENCE IF NOT EXISTS study_number_seq;
+CREATE SEQUENCE IF NOT EXISTS group_number_seq;
 
 
 -- Initialize sequences to start from 1
@@ -381,6 +497,8 @@ SELECT setval('animal_number_seq', 1, false);
 SELECT setval('protocol_id_seq', 1, false);
 SELECT setval('inventory_id_seq', 1, false);
 SELECT setval('experiment_id_seq', 1, false);
+SELECT setval('study_number_seq', 1, false);
+SELECT setval('group_number_seq', 1, false);
 
 -- ================================================================================
 -- CORE FUNCTIONS
@@ -418,8 +536,12 @@ BEGIN
       SELECT COALESCE(MAX(inventory_id), 0) + 1 INTO next_val FROM inventory WHERE inventory_id > 0;
     WHEN 'experiment' THEN
       SELECT COALESCE(MAX(experiment_id), 0) + 1 INTO next_val FROM experiments WHERE experiment_id > 0;
+    WHEN 'study' THEN
+      SELECT COALESCE(MAX(study_number), 0) + 1 INTO next_val FROM experimental_studies WHERE study_number > 0;
+    WHEN 'group' THEN
+      SELECT COALESCE(MAX(group_number), 0) + 1 INTO next_val FROM experimental_groups WHERE group_number > 0;
     ELSE
-      RAISE EXCEPTION 'Invalid entity type: %. Valid types: collaborator, project, specimen, patient, animal, protocol, inventory, experiment', entity_type;
+      RAISE EXCEPTION 'Invalid entity type: %. Valid types: collaborator, project, specimen, patient, animal, protocol, inventory, experiment, study, group', entity_type;
   END CASE;
   
   RETURN next_val;
@@ -449,8 +571,12 @@ BEGIN
       SELECT COALESCE(MAX(inventory_id), 0) + 1 INTO next_val FROM inventory WHERE inventory_id > 0;
     WHEN 'experiment' THEN
       SELECT COALESCE(MAX(experiment_id), 0) + 1 INTO next_val FROM experiments WHERE experiment_id > 0;
+    WHEN 'study' THEN
+      SELECT COALESCE(MAX(study_number), 0) + 1 INTO next_val FROM experimental_studies WHERE study_number > 0;
+    WHEN 'group' THEN
+      SELECT COALESCE(MAX(group_number), 0) + 1 INTO next_val FROM experimental_groups WHERE group_number > 0;
     ELSE
-      RAISE EXCEPTION 'Invalid entity type: %. Valid types: collaborator, project, specimen, patient, animal, protocol, inventory, experiment', entity_type;
+      RAISE EXCEPTION 'Invalid entity type: %. Valid types: collaborator, project, specimen, patient, animal, protocol, inventory, experiment, study, group', entity_type;
   END CASE;
   
   RETURN next_val;
@@ -835,6 +961,9 @@ CREATE TRIGGER update_experiments_timestamp BEFORE UPDATE ON experiments FOR EAC
 CREATE TRIGGER update_system_options_timestamp BEFORE UPDATE ON system_options FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_animals_timestamp BEFORE UPDATE ON animals FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_housing_timestamp BEFORE UPDATE ON housing FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_experimental_studies_timestamp BEFORE UPDATE ON experimental_studies FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_experimental_groups_timestamp BEFORE UPDATE ON experimental_groups FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_animal_group_assignments_timestamp BEFORE UPDATE ON animal_group_assignments FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 
 -- Metadata change logging function
 CREATE OR REPLACE FUNCTION log_specimen_metadata_changes()
@@ -880,6 +1009,8 @@ CREATE INDEX IF NOT EXISTS idx_specimens_number ON specimens(specimen_number);
 CREATE INDEX IF NOT EXISTS idx_patients_number ON patients(patient_number);
 CREATE INDEX IF NOT EXISTS idx_animals_number ON animals(animal_number);
 CREATE INDEX IF NOT EXISTS idx_protocols_id ON protocols(protocol_id);
+CREATE INDEX IF NOT EXISTS idx_experimental_studies_number ON experimental_studies(study_number);
+CREATE INDEX IF NOT EXISTS idx_experimental_groups_number ON experimental_groups(group_number);
 
 -- Metadata and JSON indexes
 CREATE INDEX IF NOT EXISTS idx_specimens_metadata_gin ON specimens USING GIN (metadata);
@@ -917,6 +1048,15 @@ CREATE INDEX IF NOT EXISTS idx_animals_dam_id ON animals(dam_id);
 CREATE INDEX IF NOT EXISTS idx_animals_sire_id ON animals(sire_id);
 CREATE INDEX IF NOT EXISTS idx_animal_weights_animal_id ON animal_weights(animal_id);
 CREATE INDEX IF NOT EXISTS idx_animal_observations_animal_id ON animal_observations(animal_id);
+-- Experimental group indexes
+CREATE INDEX IF NOT EXISTS idx_experimental_groups_study_id ON experimental_groups(study_id);
+CREATE INDEX IF NOT EXISTS idx_animal_group_assignments_animal_id ON animal_group_assignments(animal_id);
+CREATE INDEX IF NOT EXISTS idx_animal_group_assignments_group_id ON animal_group_assignments(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_treatments_group_id ON group_treatments(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_measurements_group_id ON group_measurements(group_id);
+CREATE INDEX IF NOT EXISTS idx_animal_group_measurements_assignment_id ON animal_group_measurements(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_animal_group_measurements_measurement_id ON animal_group_measurements(measurement_id);
+CREATE INDEX IF NOT EXISTS idx_experimental_studies_created_by ON experimental_studies(created_by);
 
 -- Search field indexes for WHERE clause performance
 CREATE INDEX IF NOT EXISTS idx_projects_specimen_type ON projects(specimen_type);
@@ -927,6 +1067,16 @@ CREATE INDEX IF NOT EXISTS idx_animals_species ON animals(species);
 CREATE INDEX IF NOT EXISTS idx_animals_strain ON animals(strain);
 CREATE INDEX IF NOT EXISTS idx_animals_status ON animals(status);
 CREATE INDEX IF NOT EXISTS idx_animals_sex ON animals(sex);
+-- Experimental group search indexes
+CREATE INDEX IF NOT EXISTS idx_experimental_studies_status ON experimental_studies(status);
+CREATE INDEX IF NOT EXISTS idx_experimental_studies_species ON experimental_studies(species_required);
+CREATE INDEX IF NOT EXISTS idx_experimental_studies_pi ON experimental_studies(principal_investigator);
+CREATE INDEX IF NOT EXISTS idx_experimental_groups_status ON experimental_groups(status);
+CREATE INDEX IF NOT EXISTS idx_experimental_groups_type ON experimental_groups(group_type);
+CREATE INDEX IF NOT EXISTS idx_animal_group_assignments_status ON animal_group_assignments(status);
+CREATE INDEX IF NOT EXISTS idx_animal_group_assignments_date ON animal_group_assignments(assignment_date);
+CREATE INDEX IF NOT EXISTS idx_group_treatments_dates ON group_treatments(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_animal_group_measurements_date ON animal_group_measurements(measurement_date);
 
 -- Composite indexes for common search patterns
 CREATE INDEX IF NOT EXISTS idx_specimens_project_specimen_type ON specimens(project_id) INCLUDE (specimen_number);

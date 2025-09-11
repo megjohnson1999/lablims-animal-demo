@@ -12,7 +12,7 @@ const { getAllColumnKeys, getColumnConfig, buildSelectClause, buildExcelColumns 
 // @route   GET api/export/specimens/csv
 // @desc    Export specimens data as CSV with filtering
 // @access  Private
-router.get('/specimens/csv', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.get('/specimens/csv', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   try {
     const {
       searchTerm,
@@ -555,7 +555,7 @@ router.get('/specimens/csv', [auth, roleCheck(['admin', 'lab_manager', 'lab_tech
 // @route   GET api/export/specimens/excel
 // @desc    Export specimens data as Excel with formatting
 // @access  Private
-router.get('/specimens/excel', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.get('/specimens/excel', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   try {
     const {
       searchTerm,
@@ -1088,7 +1088,7 @@ router.get('/specimens/excel', [auth, roleCheck(['admin', 'lab_manager', 'lab_te
 // @route   GET api/export/inventory/csv
 // @desc    Export inventory data as CSV with filtering
 // @access  Private
-router.get('/inventory/csv', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.get('/inventory/csv', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   try {
     const {
       searchTerm,
@@ -1295,7 +1295,7 @@ router.get('/inventory/csv', [auth, roleCheck(['admin', 'lab_manager', 'lab_tech
 // @route   GET api/export/inventory/excel
 // @desc    Export inventory data as Excel with formatting
 // @access  Private
-router.get('/inventory/excel', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.get('/inventory/excel', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   try {
     const {
       searchTerm,

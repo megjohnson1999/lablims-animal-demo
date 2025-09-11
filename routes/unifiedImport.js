@@ -121,7 +121,7 @@ router.post('/migration/:entityType', [auth, roleCheck(['admin']), upload.single
  * @desc    Import new project data (generates sequential IDs)
  * @access  Private (admin/editor)
  */
-router.post('/project/:entityType', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician']), upload.single('file')], async (req, res) => {
+router.post('/project/:entityType', [auth, roleCheck(['admin', 'facility_manager', 'technician']), upload.single('file')], async (req, res) => {
   try {
     const { entityType } = req.params;
     
@@ -197,7 +197,7 @@ router.post('/project/:entityType', [auth, roleCheck(['admin', 'lab_manager', 'l
  * @desc    Validate import data without saving
  * @access  Private (admin/editor)
  */
-router.post('/validate/:entityType', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician']), upload.single('file')], async (req, res) => {
+router.post('/validate/:entityType', [auth, roleCheck(['admin', 'facility_manager', 'technician']), upload.single('file')], async (req, res) => {
   try {
     const { entityType } = req.params;
     const { importType = 'project' } = req.body; // default to project

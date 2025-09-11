@@ -31,7 +31,7 @@ import {
 } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { exportAPI, collaboratorAPI, projectAPI } from '../../services/api';
+import { exportAPI, studiesAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 
 // Column configuration for export

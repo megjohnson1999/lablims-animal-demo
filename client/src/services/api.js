@@ -36,40 +36,9 @@ axios.interceptors.response.use(
   }
 );
 
-// Collaborators API
-const collaboratorAPI = {
-  getAll: (params = '') => axios.get(`/api/collaborators${params}`),
-  getById: (id) => axios.get(`/api/collaborators/${id}`),
-  create: (collaboratorData) => axios.post('/api/collaborators', collaboratorData),
-  update: (id, collaboratorData) => axios.put(`/api/collaborators/${id}`, collaboratorData),
-  delete: (id) => axios.delete(`/api/collaborators/${id}`),
-  getProjects: (id) => axios.get(`/api/collaborators/${id}/projects`),
-  bulkImport: (data) => axios.post('/api/collaborators/bulk-import', data),
-};
-
-// Projects API
-const projectAPI = {
-  getAll: (params = '') => axios.get(`/api/projects${params}`),
-  getWithMetadata: () => axios.get('/api/projects/with-metadata'),
-  getById: (id) => axios.get(`/api/projects/${id}`),
-  create: (projectData) => axios.post('/api/projects', projectData),
-  update: (id, projectData) => axios.put(`/api/projects/${id}`, projectData),
-  delete: (id) => axios.delete(`/api/projects/${id}`),
-  getSpecimens: (id) => axios.get(`/api/projects/${id}/specimens`),
-  bulkImport: (data) => axios.post('/api/projects/bulk-import', data),
-};
-
-// Patients API
-const patientAPI = {
-  getAll: (queryString = '') => axios.get(`/api/patients${queryString}`),
-  search: (term) => axios.get(`/api/patients/search?term=${term}`),
-  getById: (id) => axios.get(`/api/patients/${id}`),
-  create: (patientData) => axios.post('/api/patients', patientData),
-  update: (id, patientData) => axios.put(`/api/patients/${id}`, patientData),
-  delete: (id) => axios.delete(`/api/patients/${id}`),
-  getSpecimens: (id) => axios.get(`/api/patients/${id}/specimens`),
-  bulkImport: (data) => axios.post('/api/patients/bulk-import', data),
-};
+// Legacy APIs removed for streamlined animal research:
+// - collaboratorAPI (now handled within studies)
+// - projectAPI (consolidated into studiesAPI)
 
 // Specimens API
 const specimenAPI = {
@@ -233,17 +202,17 @@ const idsAPI = {
   getHistory: (entityType, limit = 100) => axios.get(`/api/ids/history/${entityType}?limit=${limit}`),
 };
 
-// Protocols API
-const protocolAPI = {
-  getAll: (params = '') => axios.get(`/api/protocols${params}`),
-  getById: (id) => axios.get(`/api/protocols/${id}`),
-  create: (protocolData) => axios.post('/api/protocols', protocolData),
-  update: (id, protocolData) => axios.put(`/api/protocols/${id}`, protocolData),
-  delete: (id) => axios.delete(`/api/protocols/${id}`),
-  search: (term) => axios.get(`/api/protocols/search?term=${term}`),
-  getUsageStats: () => axios.get('/api/protocols/usage-stats'),
-  duplicate: (id, data) => axios.post(`/api/protocols/${id}/duplicate`, data),
-  calculateReagents: (id, sampleCount) => axios.post(`/api/protocols/${id}/calculate-reagents`, { sample_count: sampleCount })
+// Procedures API - Unified (protocols part of procedures)
+const proceduresAPI = {
+  getAll: (params = '') => axios.get(`/api/procedures${params}`),
+  getById: (id) => axios.get(`/api/procedures/${id}`),
+  create: (protocolData) => axios.post('/api/procedures', protocolData),
+  update: (id, protocolData) => axios.put(`/api/procedures/${id}`, protocolData),
+  delete: (id) => axios.delete(`/api/procedures/${id}`),
+  search: (term) => axios.get(`/api/procedures/search?term=${term}`),
+  getUsageStats: () => axios.get('/api/procedures/usage-stats'),
+  duplicate: (id, data) => axios.post(`/api/procedures/${id}/duplicate`, data),
+  calculateReagents: (id, sampleCount) => axios.post(`/api/procedures/${id}/calculate-reagents`, { sample_count: sampleCount })
 };
 
 // Experiments API
@@ -256,19 +225,82 @@ const experimentsAPI = {
   search: (term) => axios.get(`/api/experiments/search?term=${term}`)
 };
 
+// Animals API
+const animalAPI = {
+  getAll: (params = '') => axios.get(`/api/animals${params}`),
+  getById: (id) => axios.get(`/api/animals/${id}`),
+  create: (animalData) => axios.post('/api/animals', animalData),
+  update: (id, animalData) => axios.put(`/api/animals/${id}`, animalData),
+  delete: (id) => axios.delete(`/api/animals/${id}`),
+  getStats: () => axios.get('/api/animals/stats/summary'),
+  getSpeciesSuggestions: (search = '') => axios.get(`/api/animals/species/suggestions?search=${encodeURIComponent(search)}`),
+  getWeights: (id) => axios.get(`/api/animals/${id}/weights`),
+  addWeight: (id, weightData) => axios.post(`/api/animals/${id}/weights`, weightData),
+  getObservations: (id, limit = 20) => axios.get(`/api/animals/${id}/observations?limit=${limit}`),
+  addObservation: (id, observationData) => axios.post(`/api/animals/${id}/observations`, observationData),
+  getBreedingInfo: (id) => axios.get(`/api/animals/${id}/breeding`)
+};
+
+// Housing API  
+const housingAPI = {
+  getAll: (params = '') => axios.get(`/api/housing${params}`),
+  getById: (id) => axios.get(`/api/housing/${id}`),
+  create: (housingData) => axios.post('/api/housing', housingData),
+  update: (id, housingData) => axios.put(`/api/housing/${id}`, housingData),
+  delete: (id) => axios.delete(`/api/housing/${id}`),
+  assignAnimal: (id, animalId) => axios.put(`/api/housing/${id}/assign-animal`, { animal_id: animalId }),
+  removeAnimal: (id, animalId) => axios.put(`/api/housing/${id}/remove-animal`, { animal_id: animalId }),
+  getStats: () => axios.get('/api/housing/stats/summary')
+};
+
+// Studies API - Unified (combines Projects + Experimental Studies)
+const studiesAPI = {
+  getAll: (params = '') => axios.get(`/api/studies${params}`),
+  getById: (id) => axios.get(`/api/studies/${id}`),
+  create: (studyData) => axios.post('/api/studies', studyData),
+  update: (id, studyData) => axios.put(`/api/studies/${id}`, studyData),
+  delete: (id) => axios.delete(`/api/studies/${id}`),
+  getStats: () => axios.get('/api/studies/stats/summary')
+};
+
+// Groups API - Unified (was experimental-groups)
+const groupsAPI = {
+  getAll: (params = '') => axios.get(`/api/groups${params}`),
+  getById: (id) => axios.get(`/api/groups/${id}`),
+  create: (groupData) => axios.post('/api/groups', groupData),
+  update: (id, groupData) => axios.put(`/api/groups/${id}`, groupData),
+  delete: (id) => axios.delete(`/api/groups/${id}`),
+  assignAnimal: (id, animalData) => axios.post(`/api/groups/${id}/animals`, animalData),
+  removeAnimal: (groupId, animalId, removalData) => axios.delete(`/api/groups/${groupId}/animals/${animalId}`, { data: removalData }),
+  addTreatment: (id, treatmentData) => axios.post(`/api/groups/${id}/treatments`, treatmentData),
+  addMeasurement: (id, measurementData) => axios.post(`/api/groups/${id}/measurements`, measurementData)
+};
+
+// For backward compatibility during transition, alias new APIs to old names
+const experimentalStudiesAPI = studiesAPI; // Temporary alias for existing components
+const experimentalGroupsAPI = groupsAPI; // Temporary alias for existing components
+const protocolAPI = proceduresAPI; // Temporary alias for existing components
+
 export {
   setAuthToken,
-  collaboratorAPI,
-  projectAPI,
-  patientAPI,
+  // Streamlined APIs for Animal Research LIMS
+  studiesAPI,
+  groupsAPI, 
   specimenAPI,
+  proceduresAPI,
+  experimentsAPI,
+  animalAPI,
+  housingAPI,
+  inventoryAPI,
   labelAPI,
+  // System APIs
   authAPI,
   auditAPI,
   exportAPI,
   metadataAPI,
-  inventoryAPI,
-  protocolAPI,
-  experimentsAPI,
   idsAPI,
+  // Backward compatibility aliases (temporary)
+  experimentalStudiesAPI,
+  experimentalGroupsAPI,
+  protocolAPI,
 };

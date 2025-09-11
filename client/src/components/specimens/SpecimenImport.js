@@ -44,7 +44,7 @@ import {
 import { useDropzone } from 'react-dropzone';
 import ProjectSelector from '../common/ProjectSelector';
 import TemplateDownloader from '../common/TemplateDownloader';
-import { specimenAPI, projectAPI } from '../../services/api';
+import { specimenAPI, studiesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';

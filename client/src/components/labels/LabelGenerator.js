@@ -28,7 +28,7 @@ import {
   Search as SearchIcon,
   GetApp as DownloadIcon,
 } from '@mui/icons-material';
-import { specimenAPI, projectAPI, labelAPI } from '../../services/api';
+import { specimenAPI, studiesAPI, labelAPI } from '../../services/api';
 import { getLocationString, formatDate } from '../../utils/helpers';
 import { toast } from 'react-toastify';
 import PrintableLabel from './PrintableLabel';
@@ -52,7 +52,7 @@ const LabelGenerator = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await projectAPI.getAll('?limit=1000'); // Get all projects
+        const response = await studiesAPI.getAll('?limit=1000'); // Get all studies
         console.log('Projects API response:', response.data);
         // API returns {projects: [...], pagination: {...}}
         const projects = Array.isArray(response.data?.projects) ? response.data.projects : [];
@@ -325,7 +325,7 @@ const LabelGenerator = () => {
                     if (projectId) {
                       setLoading(true);
                       try {
-                        const response = await projectAPI.getSpecimens(projectId);
+                        const response = await specimenAPI.getAll(`?project_id=${projectId}&limit=1000`);
                         setSpecimens(response.data);
                         setError('');
                       } catch (err) {

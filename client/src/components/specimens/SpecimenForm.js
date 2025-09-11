@@ -31,7 +31,7 @@ import {
   Storage as MetadataIcon,
 } from '@mui/icons-material';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { specimenAPI, projectAPI, patientAPI } from '../../services/api';
+import { specimenAPI, studiesAPI, animalAPI } from '../../services/api';
 import { cleanFormData } from '../../utils/helpers';
 import { toast } from 'react-toastify';
 import { formatDate } from '../../utils/helpers';
@@ -44,7 +44,7 @@ const SpecimenForm = () => {
   const isEditing = Boolean(id);
   const [formData, setFormData] = useState({
     project_id: '',
-    patient_id: '',
+    animal_id: '',
     tube_id: '',
     extracted: false,
     initial_quantity: '',
@@ -57,24 +57,21 @@ const SpecimenForm = () => {
     date_collected: '',
     collection_category: '',
     extraction_method: '',
-    nucleated_cells: '',
-    cell_numbers: '',
-    percentage_segs: '',
-    csf_protein: '',
-    csf_gluc: '',
     used_up: false,
     specimen_site: '',
     run_number: '',
     comments: '',
+    collection_timepoint: '',
+    anatomical_site: '',
     metadata: {},
   });
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(isEditing);
   const [error, setError] = useState('');
   const [projects, setProjects] = useState([]);
-  const [patients, setPatients] = useState([]);
-  const [searchingPatient, setSearchingPatient] = useState(false);
-  const [patientSearchTerm, setPatientSearchTerm] = useState('');
+  const [animals, setAnimals] = useState([]);
+  const [searchingAnimal, setSearchingAnimal] = useState(false);
+  const [animalSearchTerm, setAnimalSearchTerm] = useState('');
   const [metadataExpanded, setMetadataExpanded] = useState(false);
   const [metadataSuggestions, setMetadataSuggestions] = useState([]);
   const [newMetadataKey, setNewMetadataKey] = useState('');
@@ -95,7 +92,7 @@ const SpecimenForm = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await projectAPI.getAll();
+        const response = await studiesAPI.getAll();
         setProjects(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
         console.error('Error fetching projects', err);
@@ -122,13 +119,13 @@ const SpecimenForm = () => {
             ...specimenData,
           });
           
-          // If there's a patient, fetch patient details
-          if (specimenData.patient_id) {
+          // If there's an animal, fetch animal details
+          if (specimenData.animal_id) {
             try {
-              const patientResponse = await patientAPI.getById(specimenData.patient_id);
-              setPatients([patientResponse.data]);
+              const animalResponse = await animalAPI.getById(specimenData.animal_id);
+              setAnimals([animalResponse.data]);
             } catch (err) {
-              console.error('Error fetching patient', err);
+              console.error('Error fetching animal', err);
             }
           }
         } catch (err) {
@@ -254,29 +251,29 @@ const SpecimenForm = () => {
     setNewMetadataType(suggestion.suggested_type || 'text');
   };
 
-  const handlePatientSearch = async (term) => {
+  const handleAnimalSearch = async (term) => {
     if (!term || term.length < 2) {
-      setPatients([]);
+      setAnimals([]);
       return;
     }
     
-    setPatientSearchTerm(term);
-    setSearchingPatient(true);
+    setAnimalSearchTerm(term);
+    setSearchingAnimal(true);
     
     try {
-      const response = await patientAPI.search(term);
-      setPatients(response.data);
+      const response = await animalAPI.getAll(`?search=${encodeURIComponent(term)}&limit=20`);
+      setAnimals(response.data.animals || []);
     } catch (err) {
-      console.error('Error searching patients', err);
+      console.error('Error searching animals', err);
     } finally {
-      setSearchingPatient(false);
+      setSearchingAnimal(false);
     }
   };
 
-  const handlePatientChange = (event, newValue) => {
+  const handleAnimalChange = (event, newValue) => {
     setFormData({
       ...formData,
-      patient_id: newValue ? newValue.id : '',
+      animal_id: newValue ? newValue.id : '',
     });
   };
 
@@ -390,27 +387,27 @@ const SpecimenForm = () => {
             
             <Grid item xs={12} md={6}>
               <Autocomplete
-                options={patients}
-                loading={searchingPatient}
+                options={animals}
+                loading={searchingAnimal}
                 getOptionLabel={(option) => 
-                  `${option.external_id || ''} ${option.first_name || ''} ${option.last_name || ''}`.trim()
+                  `#${option.animal_number || ''} - ${option.species || ''} ${option.strain || ''}`.trim()
                 }
-                value={patients.find(p => p.id === formData.patient_id) || null}
-                onChange={handlePatientChange}
+                value={animals.find(a => a.id === formData.animal_id) || null}
+                onChange={handleAnimalChange}
                 onInputChange={(event, newInputValue) => {
-                  handlePatientSearch(newInputValue);
+                  handleAnimalSearch(newInputValue);
                 }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Patient"
+                    label="Animal"
                     fullWidth
-                    helperText="Search patients by name or ID"
+                    helperText="Search animals by number, species, or strain"
                     InputProps={{
                       ...params.InputProps,
                       endAdornment: (
                         <>
-                          {searchingPatient ? <CircularProgress color="inherit" size={20} /> : null}
+                          {searchingAnimal ? <CircularProgress color="inherit" size={20} /> : null}
                           {params.InputProps.endAdornment}
                         </>
                       ),
@@ -461,6 +458,27 @@ const SpecimenForm = () => {
                 name="specimen_site"
                 label="Specimen Site"
                 value={formData.specimen_site}
+                onChange={handleChange}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Collection Timepoint"
+                name="collection_timepoint"
+                value={formData.collection_timepoint}
+                onChange={handleChange}
+                helperText="e.g., baseline, 2 weeks, 30 days post-infection"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <SystemOptionSelect
+                category="anatomical_site"
+                name="anatomical_site"
+                label="Anatomical Site"
+                value={formData.anatomical_site}
                 onChange={handleChange}
               />
             </Grid>
@@ -598,62 +616,7 @@ const SpecimenForm = () => {
               />
             </Grid>
             
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                label="Nucleated Cells"
-                name="nucleated_cells"
-                value={formData.nucleated_cells}
-                onChange={handleChange}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                label="Cell Numbers"
-                name="cell_numbers"
-                type="number"
-                value={formData.cell_numbers}
-                onChange={handleChange}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                label="% Segs"
-                name="percentage_segs"
-                type="number"
-                value={formData.percentage_segs}
-                onChange={handleChange}
-                InputProps={{ inputProps: { min: 0, max: 100, step: 0.1 } }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                label="CSF Protein"
-                name="csf_protein"
-                type="number"
-                value={formData.csf_protein}
-                onChange={handleChange}
-                InputProps={{ inputProps: { step: 0.01 } }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <TextField
-                fullWidth
-                label="CSF Glucose"
-                name="csf_gluc"
-                type="number"
-                value={formData.csf_gluc}
-                onChange={handleChange}
-                InputProps={{ inputProps: { step: 0.01 } }}
-              />
-            </Grid>
+            {/* Clinical fields removed - not relevant for animal research */}
             
             <Grid item xs={12}>
               <TextField
@@ -723,7 +686,7 @@ const SpecimenForm = () => {
                             label="Field Name"
                             value={newMetadataKey}
                             onChange={(e) => setNewMetadataKey(e.target.value)}
-                            placeholder="e.g., patient_age"
+                            placeholder="e.g., animal_weight"
                           />
                         </Grid>
                         <Grid item xs={12} sm={4}>
@@ -736,21 +699,7 @@ const SpecimenForm = () => {
                             placeholder="Enter value"
                           />
                         </Grid>
-                        <Grid item xs={12} sm={2}>
-                          <FormControl fullWidth size="small">
-                            <InputLabel>Type</InputLabel>
-                            <Select
-                              value={newMetadataType}
-                              onChange={(e) => setNewMetadataType(e.target.value)}
-                              label="Type"
-                            >
-                              <MenuItem value="text">Text</MenuItem>
-                              <MenuItem value="number">Number</MenuItem>
-                              <MenuItem value="boolean">Boolean</MenuItem>
-                              <MenuItem value="date">Date</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
+                        {/* Simplified: removed type selection - just use text */}
                         <Grid item xs={12} sm={2}>
                           <Button
                             fullWidth

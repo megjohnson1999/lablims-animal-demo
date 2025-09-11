@@ -369,7 +369,7 @@ router.post(
   '/',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('name', 'Name is required').not().isEmpty(),
       check('category', 'Category is required').not().isEmpty(),
@@ -498,7 +498,7 @@ router.put(
   '/:id',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('name', 'Name is required').not().isEmpty(),
       check('category', 'Category is required').not().isEmpty(),
@@ -610,7 +610,7 @@ router.put(
   '/:id/quantity',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('quantity', 'Quantity must be a number').isNumeric(),
       check('reason', 'Reason is required').not().isEmpty()
@@ -789,7 +789,7 @@ router.post(
   '/transactions',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('inventory_id', 'Inventory ID is required').not().isEmpty(),
       check('transaction_type', 'Transaction type is required').isIn(['in', 'out', 'adjustment']),
@@ -1218,7 +1218,7 @@ router.get('/barcode-stats', auth, async (req, res) => {
 // @access  Private (admin/editor only)
 router.post('/add-product-to-db', [
   auth,
-  roleCheck(['admin', 'lab_manager', 'lab_technician']),
+  roleCheck(['admin', 'facility_manager', 'technician']),
   [
     check('barcode', 'Barcode is required').notEmpty(),
     check('name', 'Product name is required').notEmpty(),

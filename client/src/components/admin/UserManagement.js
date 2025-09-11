@@ -55,7 +55,7 @@ const UserManagement = () => {
   const [menuAnchor, setMenuAnchor] = useState(null);
 
   // Check if current user can manage users
-  const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'lab_manager';
+  const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'facility_manager';
 
   useEffect(() => {
     if (!canManageUsers) return;
@@ -120,9 +120,9 @@ const UserManagement = () => {
   const getRoleChipColor = (role) => {
     const colors = {
       admin: 'error',
-      lab_manager: 'warning',
-      lab_technician: 'primary',
-      bioinformatician: 'secondary',
+      facility_manager: 'warning',
+      technician: 'primary',
+      veterinarian: 'secondary',
       researcher: 'default'
     };
     return colors[role] || 'default';
@@ -131,10 +131,10 @@ const UserManagement = () => {
   const getRoleDisplayName = (role) => {
     const names = {
       admin: 'System Admin',
-      lab_manager: 'Lab Manager',
-      lab_technician: 'Lab Technician',
-      bioinformatician: 'Bioinformatician',
-      researcher: 'Researcher'
+      facility_manager: 'Facility Manager',
+      veterinarian: 'Veterinarian',
+      researcher: 'Researcher',
+      technician: 'Research Technician'
     };
     return names[role] || role;
   };
@@ -159,7 +159,7 @@ const UserManagement = () => {
     return (
       <Box className="page-container">
         <Alert severity="error">
-          You don't have permission to manage users. Only Lab Managers and Administrators can access this feature.
+          You don't have permission to manage users. Only Facility Managers and Administrators can access this feature.
         </Alert>
       </Box>
     );
@@ -379,13 +379,13 @@ const UserManagement = () => {
 
       <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
         <Typography variant="body2" color="text.secondary">
-          <strong>Lab Roles:</strong>
+          <strong>Animal Research Roles:</strong>
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          • <strong>Lab Manager:</strong> Full system access and user management<br />
-          • <strong>Lab Technician:</strong> Full CRUD on specimens, protocols, experiments, inventory<br />
-          • <strong>Bioinformatician:</strong> Full access to sequencing data and experiments<br />
-          • <strong>Researcher:</strong> Read-only access to assigned projects
+          • <strong>Facility Manager:</strong> Oversight of animal care operations and lab management<br />
+          • <strong>Veterinarian:</strong> Animal health monitoring and medical procedures<br />
+          • <strong>Research Technician:</strong> Daily animal care, sample collection, and data entry<br />
+          • <strong>Researcher:</strong> Study design, data analysis, and research oversight
         </Typography>
       </Box>
     </Box>

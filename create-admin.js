@@ -33,7 +33,7 @@ async function createAdmin() {
   try {
     // Check if any admin users already exist
     const existingAdmins = await pool.query(
-      "SELECT id, username FROM users WHERE role = 'admin' OR role = 'lab_manager'"
+      "SELECT id, username FROM users WHERE role = 'admin' OR role = 'facility_manager'"
     );
 
     if (existingAdmins.rows.length > 0) {
@@ -54,7 +54,7 @@ async function createAdmin() {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(adminPassword, salt);
     
-    // Insert admin user with lab_manager role (can manage users)
+    // Insert admin user with facility_manager role (can manage users)
     const result = await pool.query(`
       INSERT INTO users (
         username, email, password, first_name, last_name, role, 
@@ -67,7 +67,7 @@ async function createAdmin() {
       hashedPassword, 
       'Lab', 
       'Administrator', 
-      'lab_manager', 
+      'facility_manager', 
       generatedPassword, // Force password change if generated
       true
     ]);

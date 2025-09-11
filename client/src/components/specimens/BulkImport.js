@@ -31,7 +31,7 @@ import {
   ImportExport as ImportIcon,
 } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
-import { specimenAPI, projectAPI, collaboratorAPI } from '../../services/api';
+import { specimenAPI, studiesAPI } from '../../services/api';
 import { parseDelimitedData } from '../../utils/helpers';
 import { toast } from 'react-toastify';
 import { formatProjectDisplay, sortProjects } from '../../utils/projectUtils';
@@ -62,7 +62,7 @@ const BulkImport = () => {
     const fetchData = async () => {
       try {
         // Fetch projects
-        const projectResponse = await projectAPI.getAll();
+        const projectResponse = await studiesAPI.getAll();
         // Sort projects using the utility function
         const sortedProjects = sortProjects(projectResponse.data, {
           sortBy: 'number_then_disease',
@@ -70,9 +70,8 @@ const BulkImport = () => {
         });
         setProjects(sortedProjects);
 
-        // Fetch collaborators for project creation
-        const collaboratorResponse = await collaboratorAPI.getAll();
-        setCollaborators(collaboratorResponse.data);
+        // Collaborators are now integrated into studies - no separate fetch needed
+        setCollaborators([]);
       } catch (err) {
         console.error('Error fetching data', err);
         setError('Failed to load data');
@@ -180,7 +179,7 @@ const BulkImport = () => {
 
     setLoading(true);
     try {
-      const response = await projectAPI.create(newProject);
+      const response = await studiesAPI.create(newProject);
       const createdProject = response.data;
       
       // Add the new project to the list and sort again

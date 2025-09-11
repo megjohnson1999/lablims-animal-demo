@@ -68,7 +68,7 @@ function generateTemporaryPassword() {
 // @route   GET /api/users
 // @desc    Get all users (lab manager and admin only)
 // @access  Private
-router.get('/', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) => {
+router.get('/', [auth, roleCheck(['admin', 'facility_manager'])], async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
@@ -99,7 +99,7 @@ router.get('/', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) =>
 // @route   GET /api/users/:id
 // @desc    Get single user by ID
 // @access  Private
-router.get('/:id', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) => {
+router.get('/:id', [auth, roleCheck(['admin', 'facility_manager'])], async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
@@ -137,10 +137,10 @@ router.get('/:id', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res)
 // @access  Private
 router.post('/', [
   auth, 
-  roleCheck(['admin', 'lab_manager']),
+  roleCheck(['admin', 'facility_manager']),
   check('username', 'Username is required and must be 3-50 characters').isLength({ min: 3, max: 50 }).trim(),
   check('email', 'Please include a valid email').isEmail().normalizeEmail(),
-  check('role', 'Role is required').isIn(['admin', 'lab_manager', 'lab_technician', 'bioinformatician', 'researcher']),
+  check('role', 'Role is required').isIn(['admin', 'facility_manager', 'veterinarian', 'researcher', 'technician']),
   check('first_name', 'First name must be 1-100 characters').isLength({ min: 1, max: 100 }).trim(),
   check('last_name', 'Last name must be 1-100 characters').isLength({ min: 1, max: 100 }).trim()
 ], async (req, res) => {
@@ -202,10 +202,10 @@ router.post('/', [
 // @access  Private
 router.put('/:id', [
   auth, 
-  roleCheck(['admin', 'lab_manager']),
+  roleCheck(['admin', 'facility_manager']),
   check('username', 'Username must be 3-50 characters').optional().isLength({ min: 3, max: 50 }).trim(),
   check('email', 'Please include a valid email').optional().isEmail().normalizeEmail(),
-  check('role', 'Invalid role').optional().isIn(['admin', 'lab_manager', 'lab_technician', 'bioinformatician', 'researcher']),
+  check('role', 'Invalid role').optional().isIn(['admin', 'facility_manager', 'veterinarian', 'researcher', 'technician']),
   check('first_name', 'First name must be 1-100 characters').optional().isLength({ min: 1, max: 100 }).trim(),
   check('last_name', 'Last name must be 1-100 characters').optional().isLength({ min: 1, max: 100 }).trim(),
   check('active', 'Active status must be boolean').optional().isBoolean()
@@ -295,7 +295,7 @@ router.put('/:id', [
 // @route   POST /api/users/:id/reset-password
 // @desc    Reset user password (lab manager and admin only)
 // @access  Private
-router.post('/:id/reset-password', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) => {
+router.post('/:id/reset-password', [auth, roleCheck(['admin', 'facility_manager'])], async (req, res) => {
   try {
     // Check if user exists
     const userCheck = await db.query('SELECT username FROM users WHERE id = $1', [req.params.id]);
@@ -378,13 +378,13 @@ router.delete('/:id', [auth, roleCheck(['admin'])], async (req, res) => {
 // @route   GET /api/users/roles/available
 // @desc    Get available user roles
 // @access  Private
-router.get('/roles/available', [auth, roleCheck(['admin', 'lab_manager'])], async (req, res) => {
+router.get('/roles/available', [auth, roleCheck(['admin', 'facility_manager'])], async (req, res) => {
   const roles = [
     { value: 'admin', label: 'System Administrator', description: 'Full system access and user management' },
-    { value: 'lab_manager', label: 'Lab Manager', description: 'Full lab access and user management' },
-    { value: 'lab_technician', label: 'Lab Technician', description: 'Full CRUD on specimens, protocols, experiments, inventory' },
-    { value: 'bioinformatician', label: 'Bioinformatician', description: 'Full access to sequencing data and experiments' },
-    { value: 'researcher', label: 'Researcher', description: 'Read-only access to assigned projects' }
+    { value: 'facility_manager', label: 'Facility Manager', description: 'Oversight of animal care operations and lab management' },
+    { value: 'veterinarian', label: 'Veterinarian', description: 'Animal health monitoring and medical procedures' },
+    { value: 'researcher', label: 'Researcher', description: 'Study design, data analysis, and research oversight' },
+    { value: 'technician', label: 'Research Technician', description: 'Daily animal care, sample collection, and data entry' }
   ];
   
   res.json(roles);

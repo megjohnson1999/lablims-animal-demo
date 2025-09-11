@@ -292,7 +292,7 @@ router.post(
   '/',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('collaborator_id', 'Collaborator ID is required').not().isEmpty()
     ]
@@ -370,7 +370,7 @@ router.put(
   '/:id',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('collaborator_id', 'Collaborator ID is required').not().isEmpty()
     ]

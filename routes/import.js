@@ -277,7 +277,7 @@ async function checkDuplicates(specimens) {
 // @route   POST api/import/preview
 // @desc    Preview import data without saving
 // @access  Private (admin/editor only)
-router.post('/preview', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician']), upload.single('file')], async (req, res) => {
+router.post('/preview', [auth, roleCheck(['admin', 'facility_manager', 'technician']), upload.single('file')], async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ msg: 'No file uploaded' });
@@ -584,7 +584,7 @@ async function processBatch(specimens, batchSize = 1000) {
 // @route   POST api/import/execute
 // @desc    Execute import with optional deduplication
 // @access  Private (admin/editor only)
-router.post('/execute', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician']), upload.single('file')], async (req, res) => {
+router.post('/execute', [auth, roleCheck(['admin', 'facility_manager', 'technician']), upload.single('file')], async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ msg: 'No file uploaded' });
@@ -657,7 +657,7 @@ router.post('/execute', [auth, roleCheck(['admin', 'lab_manager', 'lab_technicia
 // @route   POST api/import/batch-status
 // @desc    Get batch processing status (for future real-time updates)
 // @access  Private (admin/editor only)
-router.get('/batch-status/:batchId', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.get('/batch-status/:batchId', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   // This endpoint can be enhanced later for real-time batch processing status
   res.json({
     success: true,
@@ -992,7 +992,7 @@ async function processInventoryBatch(items) {
 // @route   POST api/import/inventory
 // @desc    Import inventory data from Excel/CSV file
 // @access  Private (admin/editor only)
-router.post('/inventory', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician']), upload.single('file')], async (req, res) => {
+router.post('/inventory', [auth, roleCheck(['admin', 'facility_manager', 'technician']), upload.single('file')], async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ msg: 'No file uploaded' });

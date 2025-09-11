@@ -98,7 +98,7 @@ router.post(
     check('username', 'Username is required').not().isEmpty().isLength({ min: 3, max: 50 }).trim(),
     check('email', 'Please include a valid email').isEmail().normalizeEmail(),
     check('password', 'Password is required').not().isEmpty(),
-    check('role', 'Role is required').isIn(['admin', 'lab_manager', 'lab_technician', 'bioinformatician', 'researcher']),
+    check('role', 'Role is required').isIn(['admin', 'facility_manager', 'veterinarian', 'researcher', 'technician']),
     check('first_name', 'First name must be 1-100 characters').optional().isLength({ min: 1, max: 100 }).trim(),
     check('last_name', 'Last name must be 1-100 characters').optional().isLength({ min: 1, max: 100 }).trim()
   ],

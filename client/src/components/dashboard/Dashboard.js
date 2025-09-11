@@ -32,10 +32,10 @@ import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
-    collaborators: 0,
-    projects: 0,
-    specimens: 0,
-    patients: 0
+    animals: 0,
+    studies: 0,
+    samples: 0,
+    groups: 0
   });
   const [inventoryAlerts, setInventoryAlerts] = useState({
     lowStock: [],
@@ -74,39 +74,39 @@ const Dashboard = () => {
       try {
         // Get basic statistics (available to all roles)
         const basicRequests = [
-          axios.get('/api/collaborators'),
-          axios.get('/api/projects'),
+          axios.get('/api/animals?limit=1'),
+          axios.get('/api/studies?limit=1'),
           axios.get('/api/specimens?limit=1'),
-          axios.get('/api/patients'),
+          axios.get('/api/groups?limit=1'),
           axios.get('/api/specimens?limit=10&sortBy=created_at&sortOrder=desc')
         ];
 
-        // Add audit data only for admin/lab_manager roles
-        if (currentUser.role === 'admin' || currentUser.role === 'lab_manager') {
+        // Add audit data only for admin/facility_manager roles
+        if (currentUser.role === 'admin' || currentUser.role === 'facility_manager') {
           basicRequests.push(axios.get('/api/audit'));
         }
 
         const responses = await Promise.all(basicRequests);
         
         const [
-          collaboratorsRes,
-          projectsRes,
+          animalsRes,
+          studiesRes,
           specimensRes,
-          patientsRes,
+          groupsRes,
           recentSpecimensRes,
           activityRes = null
         ] = responses;
 
         console.log('API Responses:');
-        console.log('- Collaborators:', collaboratorsRes.data);
-        console.log('- Projects:', projectsRes.data);
+        console.log('- Animals:', animalsRes.data);
+        console.log('- Studies:', studiesRes.data);
         console.log('- Specimens:', specimensRes.data);
 
         const newStats = {
-          collaborators: collaboratorsRes.data.pagination?.total || 0,
-          projects: projectsRes.data.pagination?.total || 0,
-          specimens: specimensRes.data.totalCount || 0,
-          patients: patientsRes.data.pagination?.total || 0
+          animals: animalsRes.data.pagination?.total || 0,
+          studies: studiesRes.data.pagination?.total || 0,
+          samples: specimensRes.data.totalCount || 0,
+          groups: groupsRes.data.pagination?.total || 0
         };
         
         console.log('Dashboard stats updated:', newStats);
@@ -175,16 +175,16 @@ const Dashboard = () => {
       {/* Quick Barcode Search */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
-          Quick Specimen Search
+          Quick Sample Search
         </Typography>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Scan a barcode or type a specimen ID to quickly find and view specimens
+          Scan a barcode or type a sample ID to quickly find and view samples
         </Typography>
         <BarcodeSearch
           onSpecimenFound={(specimen) => {
             navigate(`/specimens/${specimen.id}`);
           }}
-          placeholder="Scan barcode or enter specimen ID..."
+          placeholder="Scan barcode or enter sample ID..."
           autoFocus={false}
           sx={{ mt: 2 }}
         />
@@ -200,13 +200,13 @@ const Dashboard = () => {
         <Paper className="stat-card" elevation={2}>
           <CardContent>
             <Typography color="primary" gutterBottom>
-              <PeopleIcon fontSize="large" />
+              <PersonIcon fontSize="large" />
             </Typography>
             <Typography variant="h4" component="div" className="stat-value">
-              {stats.collaborators}
+              {stats.animals}
             </Typography>
             <Typography variant="body2" className="stat-label">
-              Collaborators
+              Animals
             </Typography>
           </CardContent>
         </Paper>
@@ -217,10 +217,10 @@ const Dashboard = () => {
               <FolderIcon fontSize="large" />
             </Typography>
             <Typography variant="h4" component="div" className="stat-value">
-              {stats.projects}
+              {stats.studies}
             </Typography>
             <Typography variant="body2" className="stat-label">
-              Projects
+              Studies
             </Typography>
           </CardContent>
         </Paper>
@@ -231,10 +231,10 @@ const Dashboard = () => {
               <ScienceIcon fontSize="large" />
             </Typography>
             <Typography variant="h4" component="div" className="stat-value">
-              {stats.specimens}
+              {stats.samples}
             </Typography>
             <Typography variant="body2" className="stat-label">
-              Specimens
+              Samples
             </Typography>
           </CardContent>
         </Paper>
@@ -242,13 +242,13 @@ const Dashboard = () => {
         <Paper className="stat-card" elevation={2}>
           <CardContent>
             <Typography color="info" gutterBottom>
-              <PersonIcon fontSize="large" />
+              <PeopleIcon fontSize="large" />
             </Typography>
             <Typography variant="h4" component="div" className="stat-value">
-              {stats.patients}
+              {stats.groups}
             </Typography>
             <Typography variant="body2" className="stat-label">
-              Patients
+              Groups
             </Typography>
           </CardContent>
         </Paper>
@@ -375,7 +375,7 @@ const Dashboard = () => {
         <Grid item xs={12} md={5}>
           <Paper sx={{ p: 2, height: '100%' }} elevation={2}>
             <Typography variant="h6" gutterBottom>
-              Recent Specimens
+              Recent Samples
             </Typography>
             {recentSpecimens.length > 0 ? (
               <List>
@@ -420,7 +420,7 @@ const Dashboard = () => {
               </List>
             ) : (
               <Typography variant="body2" color="text.secondary">
-                No specimens found
+                No samples found
               </Typography>
             )}
           </Paper>

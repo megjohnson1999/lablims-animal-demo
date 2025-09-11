@@ -53,7 +53,7 @@ import {
   Description as FileIcon,
 } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
-import { specimenAPI, labelAPI, collaboratorAPI, projectAPI } from '../../services/api';
+import { specimenAPI, labelAPI, studiesAPI } from '../../services/api';
 import { formatDate, getLocationString } from '../../utils/helpers';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
@@ -197,9 +197,9 @@ const SpecimenList = () => {
       <Box className={className} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, my: 2 }}>
         <Typography variant="body2" color="text.secondary">
           {bulkIdText && bulkIdText.trim() ? (
-            `Showing ${specimens.length} of ${totalCount} specimens (bulk search)`
+            `Showing ${specimens.length} of ${totalCount} samples (bulk search)`
           ) : (
-            `Showing ${Math.min((page - 1) * limit + 1, totalCount)} - ${Math.min(page * limit, totalCount)} of ${totalCount} specimens`
+            `Showing ${Math.min((page - 1) * limit + 1, totalCount)} - ${Math.min(page * limit, totalCount)} of ${totalCount} samples`
           )}
         </Typography>
         {!(bulkIdText && bulkIdText.trim()) && (
@@ -473,9 +473,8 @@ const SpecimenList = () => {
   // Enhanced filtering functions
   const fetchCollaborators = async () => {
     try {
-      // Limit to 1000 collaborators for dropdown performance
-      const response = await collaboratorAPI.getAll('?limit=1000');
-      setCollaborators(response.data.collaborators || []);
+      // Collaborators now integrated into studies - skip separate fetch
+      setCollaborators([]);
     } catch (err) {
       console.error('Error fetching collaborators:', err);
       setCollaborators([]);
@@ -485,7 +484,7 @@ const SpecimenList = () => {
   const fetchProjects = async () => {
     try {
       // Limit to 1000 projects for dropdown performance  
-      const response = await projectAPI.getAll('?limit=1000');
+      const response = await studiesAPI.getAll('?limit=1000');
       setProjects(response.data.projects || []);
     } catch (err) {
       console.error('Error fetching projects:', err);
@@ -594,7 +593,7 @@ const SpecimenList = () => {
     <Box className="specimen-list page-container">
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
-          Specimens
+          Samples
         </Typography>
         <Box>
           <Button
@@ -622,7 +621,7 @@ const SpecimenList = () => {
                 color="primary"
                 startIcon={<AddIcon />}
               >
-                New Specimen
+                New Sample
               </Button>
             </>
           )}
@@ -639,7 +638,7 @@ const SpecimenList = () => {
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6">
-            Search & Filter Specimens
+            Search & Filter Samples
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
@@ -906,10 +905,10 @@ const SpecimenList = () => {
             {/* Bulk ID Upload */}
             <Box sx={{ mt: 3 }}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                Search by Specific Specimen IDs
+                Search by Specific Sample IDs
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Search for specific specimens by uploading a file or entering IDs manually
+                Search for specific samples by uploading a file or entering IDs manually
               </Typography>
 
               <Box sx={{ mt: 2 }}>
@@ -1081,7 +1080,7 @@ const SpecimenList = () => {
       {selectedSpecimens.length > 0 && (
         <Box mb={2} display="flex" alignItems="center">
           <Typography variant="body2" mr={2}>
-            {selectedSpecimens.length} specimens selected
+            {selectedSpecimens.length} samples selected
           </Typography>
           <Button
             variant="outlined"

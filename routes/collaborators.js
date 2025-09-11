@@ -123,7 +123,7 @@ router.post(
   '/',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('pi_name', 'PI name is required (1-255 chars)').not().isEmpty().isLength({ min: 1, max: 255 }).trim(),
       check('pi_institute', 'PI institute is required (1-255 chars)').not().isEmpty().isLength({ min: 1, max: 255 }).trim(),
@@ -191,7 +191,7 @@ router.put(
   '/:id',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('pi_name', 'PI name is required').not().isEmpty(),
       check('pi_institute', 'PI institute is required').not().isEmpty()

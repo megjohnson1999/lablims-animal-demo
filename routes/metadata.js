@@ -8,7 +8,7 @@ const { createErrorResponse, handleDatabaseError } = require('../utils/errorHand
 // @route   POST api/metadata/upload-preview
 // @desc    Preview global metadata upload - show what will be updated
 // @access  Private (admin/editor)
-router.post('/upload-preview', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.post('/upload-preview', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   try {
     console.log('=== METADATA UPLOAD PREVIEW DEBUG ===');
     const { csvData, specimenIdColumn, matchingStrategy = 'tube_id' } = req.body;
@@ -268,7 +268,7 @@ router.post('/upload-preview', [auth, roleCheck(['admin', 'lab_manager', 'lab_te
 // @route   POST api/metadata/upload-apply
 // @desc    Apply global metadata updates to specimens
 // @access  Private (admin/editor)
-router.post('/upload-apply', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.post('/upload-apply', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   try {
     const { csvData, specimenIdColumn, matchingStrategy = 'tube_id' } = req.body;
 

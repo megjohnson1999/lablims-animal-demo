@@ -26,7 +26,7 @@ import {
   Science as ScienceIcon,
   CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
-import { projectAPI, collaboratorAPI } from '../../services/api';
+import { studiesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { formatProjectDisplay, sortProjects, filterProjects } from '../../utils/projectUtils';
@@ -71,14 +71,15 @@ const ProjectSelector = ({
   // Debounce search term to avoid too many filter operations
   const debouncedSearchTerm = useDebounce(searchTerm, 200);
   
-  // New project form state
+  // New study form state (simplified for animal research)
   const [newProject, setNewProject] = useState({
-    collaborator_id: '',
-    disease: '',
-    specimen_type: '',
-    source: '',
-    project_number: '',
-    comments: ''
+    study_name: '',
+    principal_investigator: '',
+    species_required: '',
+    description: '',
+    iacuc_protocol_number: '',
+    total_animals_planned: 1,
+    status: 'planning'
   });
   
   const { currentUser } = useAuth();
@@ -86,7 +87,6 @@ const ProjectSelector = ({
 
   useEffect(() => {
     fetchProjects();
-    fetchCollaborators();
   }, []);
 
   // Validation logic
@@ -101,11 +101,11 @@ const ProjectSelector = ({
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      // For project selector, we want all projects (no pagination)
-      const response = await projectAPI.getAll('?limit=1000');
+      // For project selector, we want all studies (no pagination)
+      const response = await studiesAPI.getAll('?limit=1000');
       
       // Handle both old and new API response formats
-      const projectData = response.data.projects || response.data;
+      const projectData = response.data.studies || response.data.projects || response.data;
       
       // Sort projects using the utility function
       const sortedProjects = sortProjects(projectData, {
@@ -123,15 +123,7 @@ const ProjectSelector = ({
     }
   };
 
-  const fetchCollaborators = async () => {
-    try {
-      const response = await collaboratorAPI.getAll();
-      setCollaborators(Array.isArray(response.data) ? response.data : []);
-    } catch (err) {
-      console.error('Error fetching collaborators:', err);
-      setCollaborators([]); // Ensure it's always an array
-    }
-  };
+  // Collaborators are now handled within studies - simplified for animal research
 
   // Filter and search projects using memoization to avoid recalculating on every render
   const filteredProjects = useMemo(() => {
@@ -141,7 +133,7 @@ const ProjectSelector = ({
     }
     
     let filtered = projects.filter(project => {
-      if (filterCollaborator && project.collaborator_id !== filterCollaborator) {
+      if (filterCollaborator && project.principal_investigator !== filterCollaborator) {
         return false;
       }
       
@@ -174,41 +166,34 @@ const ProjectSelector = ({
         }
         
         // For non-numeric searches, use the full search logic
-        // Priority 1: Exact project_id match
-        if (project.project_id && project.project_id.toString() === searchLower) {
+        // Priority 1: Exact study_number match
+        if (project.study_number && project.study_number.toString() === searchLower) {
           return true;
         }
         
-        // Priority 2: Exact project_number match
-        if (project.project_number && project.project_number.toString() === searchLower) {
+        // Priority 2: Study name contains search term
+        if (project.study_name && project.study_name.toLowerCase().includes(searchLower)) {
           return true;
         }
         
-        // Priority 3: Project_id starts with search term (only for non-numeric)
-        if (project.project_id && project.project_id.toString().toLowerCase().startsWith(searchLower)) {
+        // Priority 3: PI name contains search term
+        if (project.principal_investigator && project.principal_investigator.toLowerCase().includes(searchLower)) {
           return true;
         }
         
-        // Priority 4: Project_number starts with search term (only for non-numeric)
-        if (project.project_number && project.project_number.toString().toLowerCase().startsWith(searchLower)) {
+        // Priority 4: Species contains search term
+        if (project.species_required && project.species_required.toLowerCase().includes(searchLower)) {
           return true;
         }
         
-        // Priority 5: Disease name contains search term
-        if (project.disease && project.disease.toLowerCase().includes(searchLower)) {
+        // Priority 5: IACUC protocol contains search term
+        if (project.iacuc_protocol_number && project.iacuc_protocol_number.toLowerCase().includes(searchLower)) {
           return true;
         }
         
-        // Priority 6: PI name contains search term
-        if (project.pi_name && project.pi_name.toLowerCase().includes(searchLower)) {
-          return true;
-        }
-        
-        // Priority 7: Other fields
+        // Priority 6: Other fields
         return (
-          (project.specimen_type && project.specimen_type.toLowerCase().includes(searchLower)) ||
-          (project.source && project.source.toLowerCase().includes(searchLower)) ||
-          (project.pi_institute && project.pi_institute.toLowerCase().includes(searchLower))
+          (project.description && project.description.toLowerCase().includes(searchLower))
         );
       });
 
@@ -243,41 +228,41 @@ const ProjectSelector = ({
     return filtered;
   }, [projects, filterCollaborator, filterStatus, debouncedSearchTerm, simplified]);
 
-  // Format project option for display
-  const formatProjectOption = (project) => {
+  // Format study option for display
+  const formatProjectOption = (study) => {
     let display = '';
     
-    // Show project_id first (this is what users search by)
-    if (project.project_id) {
-      display += `#${project.project_id}`;
+    // Show study_number first if available
+    if (study.study_number) {
+      display += `Study #${study.study_number}`;
     }
     
-    // Add project_number if different from project_id
-    if (project.project_number && project.project_number !== project.project_id?.toString()) {
-      display += display ? ` (${project.project_number})` : project.project_number;
-    }
-    
-    // Add disease name
-    if (project.disease) {
-      display += display ? ` - ${project.disease}` : project.disease;
+    // Add study name
+    if (study.study_name) {
+      display += display ? ` - ${study.study_name}` : study.study_name;
     }
     
     // Add PI name
-    if (project.pi_name) {
-      display += ` - ${project.pi_name}`;
+    if (study.principal_investigator) {
+      display += ` - ${study.principal_investigator}`;
     }
     
-    return display || 'Unnamed Project';
+    // Add species if available
+    if (study.species_required) {
+      display += ` (${study.species_required})`;
+    }
+    
+    return display || 'Unnamed Study';
   };
 
   const handleCreateProject = async () => {
     try {
-      if (!newProject.collaborator_id || !newProject.disease) {
-        setError('Please fill in required fields');
+      if (!newProject.study_name || !newProject.principal_investigator) {
+        setError('Please fill in required fields (Study Name and Principal Investigator)');
         return;
       }
 
-      const response = await projectAPI.create(newProject);
+      const response = await studiesAPI.create(newProject);
       
       // Update projects list
       setProjects([...projects, response.data]);
@@ -289,12 +274,13 @@ const ProjectSelector = ({
       
       // Reset form and close dialog
       setNewProject({
-        collaborator_id: '',
-        disease: '',
-        specimen_type: '',
-        source: '',
-        project_number: '',
-        comments: ''
+        study_name: '',
+        principal_investigator: '',
+        species_required: '',
+        description: '',
+        iacuc_protocol_number: '',
+        total_animals_planned: 1,
+        status: 'planning'
       });
       setCreateDialogOpen(false);
       setError('');
@@ -306,23 +292,23 @@ const ProjectSelector = ({
     }
   };
 
-  const renderProjectOption = (props, project) => (
-    <Box component="li" {...props} key={project.id}>
+  const renderProjectOption = (props, study) => (
+    <Box component="li" {...props} key={study.id}>
       <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
         <ScienceIcon sx={{ mr: 1, color: 'primary.main' }} />
         <Box sx={{ flexGrow: 1 }}>
           <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {project.project_id && (
+            {study.study_number && (
               <Chip 
-                label={`#${project.project_id}`} 
+                label={`Study #${study.study_number}`} 
                 size="small" 
                 color="primary"
                 sx={{ fontWeight: 'bold' }}
               />
             )}
-            {project.project_number && project.project_number !== project.project_id && (
+            {study.species_required && (
               <Chip 
-                label={`${project.project_number}`} 
+                label={study.species_required} 
                 size="small" 
                 color="secondary"
                 variant="outlined"
@@ -330,12 +316,13 @@ const ProjectSelector = ({
               />
             )}
             <Typography component="span" variant="body1">
-              {project.disease || 'Unnamed Project'}
+              {study.study_name || 'Unnamed Study'}
             </Typography>
           </Typography>
           <Typography variant="body2" color="text.secondary">
             <BusinessIcon sx={{ fontSize: 14, mr: 0.5 }} />
-            {project.pi_name} - {project.pi_institute}
+            {study.principal_investigator}
+            {study.iacuc_protocol_number && ` - IACUC: ${study.iacuc_protocol_number}`}
           </Typography>
         </Box>
       </Box>
@@ -349,7 +336,7 @@ const ProjectSelector = ({
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle>Create New Project</DialogTitle>
+      <DialogTitle>Create New Animal Research Study</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -357,73 +344,70 @@ const ProjectSelector = ({
           </Alert>
         )}
         
-        <FormControl fullWidth margin="normal" required>
-          <InputLabel>Collaborator</InputLabel>
-          <Select
-            value={newProject.collaborator_id}
-            onChange={(e) => setNewProject({...newProject, collaborator_id: e.target.value})}
-            label="Collaborator"
-          >
-            {Array.isArray(collaborators) && collaborators.map(collaborator => (
-              <MenuItem key={collaborator.id} value={collaborator.id}>
-                {collaborator.pi_name} - {collaborator.pi_institute}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
         <TextField
           fullWidth
           margin="normal"
-          label="Project Number"
-          value={newProject.project_number}
-          onChange={(e) => setNewProject({...newProject, project_number: e.target.value})}
-          helperText="Lab-specific project identifier (e.g., 849, 850)"
-        />
-
-        <TextField
-          fullWidth
-          margin="normal"
-          label="Disease/Condition"
-          value={newProject.disease}
-          onChange={(e) => setNewProject({...newProject, disease: e.target.value})}
+          label="Study Name"
+          value={newProject.study_name}
+          onChange={(e) => setNewProject({...newProject, study_name: e.target.value})}
           required
-          helperText="Primary disease or condition being studied"
+          helperText="Name of the research study"
         />
 
         <TextField
           fullWidth
           margin="normal"
-          label="Specimen Type"
-          value={newProject.specimen_type}
-          onChange={(e) => setNewProject({...newProject, specimen_type: e.target.value})}
-          helperText="Type of specimens collected (e.g., blood, tissue, CSF)"
+          label="Principal Investigator"
+          value={newProject.principal_investigator}
+          onChange={(e) => setNewProject({...newProject, principal_investigator: e.target.value})}
+          required
+          helperText="Lead researcher for this study"
         />
 
         <TextField
           fullWidth
           margin="normal"
-          label="Project Source"
-          value={newProject.source}
-          onChange={(e) => setNewProject({...newProject, source: e.target.value})}
-          helperText="Funding source or study name"
+          label="Species Required"
+          value={newProject.species_required}
+          onChange={(e) => setNewProject({...newProject, species_required: e.target.value})}
+          helperText="Animal species for this study (e.g., Mouse, Rat, Rabbit)"
         />
 
         <TextField
           fullWidth
           margin="normal"
-          label="Comments"
-          value={newProject.comments}
-          onChange={(e) => setNewProject({...newProject, comments: e.target.value})}
+          label="IACUC Protocol Number"
+          value={newProject.iacuc_protocol_number}
+          onChange={(e) => setNewProject({...newProject, iacuc_protocol_number: e.target.value})}
+          helperText="Institutional Animal Care and Use Committee protocol number"
+        />
+
+        <TextField
+          fullWidth
+          margin="normal"
+          label="Total Animals Planned"
+          type="number"
+          value={newProject.total_animals_planned}
+          onChange={(e) => setNewProject({...newProject, total_animals_planned: parseInt(e.target.value) || 1})}
+          helperText="Expected total number of animals for this study"
+          inputProps={{ min: 1 }}
+        />
+
+        <TextField
+          fullWidth
+          margin="normal"
+          label="Study Description"
+          value={newProject.description}
+          onChange={(e) => setNewProject({...newProject, description: e.target.value})}
           multiline
           rows={3}
-          helperText="Additional project notes"
+          helperText="Brief description of the study objectives and methods"
         />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
         <Button onClick={handleCreateProject} variant="contained">
-          Create Project
+          Create Study
         </Button>
       </DialogActions>
     </Dialog>
@@ -447,16 +431,17 @@ const ProjectSelector = ({
           
           <Box sx={{ display: 'flex', gap: 1 }}>
             <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>Collaborator</InputLabel>
+              <InputLabel>Principal Investigator</InputLabel>
               <Select
                 value={filterCollaborator}
                 onChange={(e) => setFilterCollaborator(e.target.value)}
-                label="Collaborator"
+                label="Principal Investigator"
               >
-                <MenuItem value="">All Collaborators</MenuItem>
-                {Array.isArray(collaborators) && collaborators.map(collaborator => (
-                  <MenuItem key={collaborator.id} value={collaborator.id}>
-                    {collaborator.pi_name}
+                <MenuItem value="">All PIs</MenuItem>
+                {/* Extract unique PIs from studies */}
+                {[...new Set(projects.map(p => p.principal_investigator).filter(Boolean))].map(pi => (
+                  <MenuItem key={pi} value={pi}>
+                    {pi}
                   </MenuItem>
                 ))}
               </Select>

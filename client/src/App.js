@@ -17,27 +17,37 @@ import ForcedPasswordChangeDialog from './components/auth/ForcedPasswordChangeDi
 // Dashboard
 import Dashboard from './components/dashboard/Dashboard';
 
-// Collaborator Components
-import CollaboratorList from './components/collaborators/CollaboratorList';
-import CollaboratorDetail from './components/collaborators/CollaboratorDetail';
-import CollaboratorForm from './components/collaborators/CollaboratorForm';
+// Legacy collaborator and project components removed - consolidated into Studies
 
-// Project Components
-import ProjectList from './components/projects/ProjectList';
-import ProjectDetail from './components/projects/ProjectDetail';
-import ProjectForm from './components/projects/ProjectForm';
-
-// Patient Components
-import PatientList from './components/patients/PatientList';
-import PatientDetail from './components/patients/PatientDetail';
-import PatientForm from './components/patients/PatientForm';
-import PatientBulkImport from './components/patients/PatientBulkImport';
+// Patient components removed - not needed for animal research LIMS
 
 // Specimen Components
 import SpecimenList from './components/specimens/SpecimenList';
 import SpecimenDetail from './components/specimens/SpecimenDetail';
 import SpecimenForm from './components/specimens/SpecimenForm';
 import BulkImport from './components/specimens/BulkImport';
+
+// Biological Samples Components
+import BiologicalSamplesList from './components/biologicalSamples/BiologicalSamplesList';
+import BiologicalSampleForm from './components/biologicalSamples/BiologicalSampleForm';
+import BiologicalSampleDetail from './components/biologicalSamples/BiologicalSampleDetail';
+
+// Animal Components
+import AnimalList from './components/animals/AnimalList';
+import AnimalForm from './components/animals/AnimalForm';
+import AnimalDetail from './components/animals/AnimalDetail';
+
+// Housing Components
+import HousingDashboard from './components/housing/HousingDashboard';
+import HousingCardGenerator from './components/housing/HousingCardGenerator';
+
+// Experimental Components
+import { 
+  ExperimentalStudiesList, 
+  ExperimentalStudyForm, 
+  ExperimentalStudyDetail,
+  ExperimentalGroupsList 
+} from './components/experimental';
 
 // Inventory Components
 import InventoryList from './components/inventory/InventoryList';
@@ -54,17 +64,12 @@ import ExperimentList from './components/experiments/ExperimentList';
 import ExperimentForm from './components/experiments/ExperimentForm';
 import ExperimentView from './components/experiments/ExperimentView';
 
-// Import Components
-import ComprehensiveImport from './components/import/ComprehensiveImport';
-import MigrationImport from './components/import/MigrationImport';
+// Complex import components removed - keeping basic specimen import only
 
 // Label Components
 import LabelGenerator from './components/labels/LabelGenerator';
 
-// Metadata Components
-import MetadataList from './components/metadata/MetadataList';
-import ProjectMetadataView from './components/metadata/ProjectMetadataView';
-import MetadataSearch from './components/metadata/MetadataSearch';
+// Metadata components removed - simplified for animal research
 
 // Settings
 import UserSettings from './components/settings/UserSettings';
@@ -138,7 +143,7 @@ function App() {
         gap: '20px',
         backgroundColor: '#f5f5f5'
       }}>
-        <h2>Loading Pathogen Discovery Database...</h2>
+        <h2>Loading Animal Research LIMS...</h2>
         <div style={{ 
           border: '4px solid #0077b6', 
           borderRadius: '50%', 
@@ -170,48 +175,53 @@ function App() {
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           
-          {/* Collaborator Routes */}
-          <Route path="collaborators">
-            <Route index element={<CollaboratorList />} />
-            <Route path=":id" element={<CollaboratorDetail />} />
-            <Route path="new" element={<CollaboratorForm />} />
-            <Route path="edit/:id" element={<CollaboratorForm />} />
+          {/* Studies Routes (combines Projects + Experimental Studies) */}
+          <Route path="studies">
+            <Route index element={<ExperimentalStudiesList />} />
+            <Route path=":id" element={<ExperimentalStudyDetail />} />
+            <Route path="new" element={<ExperimentalStudyForm />} />
+            <Route path="edit/:id" element={<ExperimentalStudyForm />} />
           </Route>
           
-          {/* Project Routes */}
-          <Route path="projects">
-            <Route index element={<ProjectList />} />
-            <Route path=":id" element={<ProjectDetail />} />
-            <Route path="new" element={<ProjectForm />} />
-            <Route path="edit/:id" element={<ProjectForm />} />
+          {/* Patient routes removed - replaced by animal management */}
+          
+          {/* Biological Samples Routes (replaces old specimens system) */}
+          <Route path="biological-samples">
+            <Route index element={<BiologicalSamplesList />} />
+            <Route path="new" element={<BiologicalSampleForm />} />
+            <Route path=":id" element={<BiologicalSampleDetail />} />
+            <Route path=":id/edit" element={<BiologicalSampleForm />} />
           </Route>
           
-          {/* Patient Routes */}
-          <Route path="patients">
-            <Route index element={<PatientList />} />
-            <Route path=":id" element={<PatientDetail />} />
-            <Route path="new" element={<PatientForm />} />
-            <Route path="edit/:id" element={<PatientForm />} />
-            <Route path="import" element={<PatientBulkImport />} />
-          </Route>
-          
-          {/* Specimen Routes */}
+          {/* Legacy Specimen Routes (kept for transition) */}
           <Route path="specimens">
             <Route index element={<SpecimenList />} />
             <Route path="new" element={<SpecimenForm />} />
             <Route path="import" element={<BulkImport />} />
-            <Route path="comprehensive-import" element={<ComprehensiveImport />} />
-            <Route path="migration-import" element={<MigrationImport />} />
+            {/* Complex import routes removed - keeping basic import only */}
             <Route path="edit/:id" element={<SpecimenForm />} />
             <Route path=":id" element={<SpecimenDetail />} />
           </Route>
           
-          {/* Metadata Routes */}
-          <Route path="metadata">
-            <Route index element={<MetadataList />} />
-            <Route path="search" element={<MetadataSearch />} />
-            <Route path=":projectId" element={<ProjectMetadataView />} />
+          {/* Animal Routes */}
+          <Route path="animals">
+            <Route index element={<AnimalList />} />
+            <Route path="new" element={<AnimalForm />} />
+            <Route path=":id" element={<AnimalDetail />} />
+            <Route path=":id/edit" element={<AnimalForm />} />
           </Route>
+          
+          {/* Housing Routes */}
+          <Route path="housing">
+            <Route index element={<HousingDashboard />} />
+            <Route path="cards" element={<HousingCardGenerator />} />
+          </Route>
+          
+          {/* Groups Routes (Experimental Groups) */}
+          <Route path="groups">
+            <Route index element={<ExperimentalGroupsList />} />
+          </Route>
+          
           
           {/* Inventory Routes */}
           <Route path="inventory">
@@ -220,25 +230,13 @@ function App() {
             <Route path="edit/:id" element={<InventoryForm />} />
           </Route>
           
-          {/* Protocol Routes */}
-          <Route path="protocols">
+          {/* Procedures Routes (combines Protocols + Experiments) */}
+          <Route path="procedures">
             <Route index element={<ProtocolList />} />
             <Route path=":id" element={<ProtocolDetail />} />
             <Route path="new" element={<ProtocolForm />} />
             <Route path=":id/edit" element={<ProtocolForm />} />
-          </Route>
-          
-          {/* Document Routes */}
-          <Route path="documents">
-            <Route index element={<DocumentLibrary />} />
-          </Route>
-          
-          {/* Experiment Routes */}
-          <Route path="experiments">
-            <Route index element={<ExperimentList />} />
-            <Route path="new" element={<ExperimentForm />} />
-            <Route path=":id" element={<ExperimentView />} />
-            <Route path=":id/edit" element={<ExperimentForm />} />
+            <Route path="documents" element={<DocumentLibrary />} />
           </Route>
           
           {/* Label Routes */}

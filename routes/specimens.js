@@ -581,7 +581,7 @@ router.post(
   '/',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('project_id', 'Project ID is required').not().isEmpty()
     ]
@@ -735,7 +735,7 @@ router.put(
   '/:id',
   [
     auth, 
-    roleCheck(['admin', 'lab_manager', 'lab_technician']),
+    roleCheck(['admin', 'facility_manager', 'technician']),
     [
       check('project_id', 'Project ID is required').not().isEmpty()
     ]
@@ -902,7 +902,7 @@ router.put(
 // @route   DELETE api/specimens/:id
 // @desc    Delete a specimen
 // @access  Private (admin/editor only)
-router.delete('/:id', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.delete('/:id', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   const client = await db.getClient();
   
   try {
@@ -1067,7 +1067,7 @@ function mapSpecimenData(specimen) {
 // @route   POST api/specimens/bulk-import
 // @desc    Bulk import specimens
 // @access  Private (admin/editor only)
-router.post('/bulk-import', [auth, roleCheck(['admin', 'lab_manager', 'lab_technician'])], async (req, res) => {
+router.post('/bulk-import', [auth, roleCheck(['admin', 'facility_manager', 'technician'])], async (req, res) => {
   try {
     const { specimens, project_id } = req.body;
     
@@ -1240,7 +1240,7 @@ router.post('/bulk-import', [auth, roleCheck(['admin', 'lab_manager', 'lab_techn
 });
 
 // Import route handlers
-const specimenImportRoutes = require('./specimenImport');
+const specimenImportRoutes = require('./import');
 router.use('/import', specimenImportRoutes);
 
 // @route   GET api/specimens/metadata-fields/:project_id
@@ -1317,7 +1317,7 @@ router.get('/metadata-analytics/:project_id', auth, async (req, res) => {
 // @route   PUT api/specimens/:id/metadata
 // @desc    Update specimen metadata
 // @access  Private
-router.put('/:id/metadata', auth, roleCheck(['admin', 'lab_manager', 'lab_technician']), async (req, res) => {
+router.put('/:id/metadata', auth, roleCheck(['admin', 'facility_manager', 'technician']), async (req, res) => {
   try {
     const { id } = req.params;
     const { metadata } = req.body;

@@ -40,7 +40,7 @@ const validationSchema = Yup.object({
     .max(100, 'Last name must not exceed 100 characters')
     .required('Last name is required'),
   role: Yup.string()
-    .oneOf(['admin', 'lab_manager', 'lab_technician', 'bioinformatician', 'researcher'])
+    .oneOf(['admin', 'facility_manager', 'technician', 'veterinarian', 'researcher'])
     .required('Role is required'),
   active: Yup.boolean()
 });
@@ -64,10 +64,10 @@ const UserEditDialog = ({ open, user, onClose, onSuccess, onError }) => {
       // Fallback roles
       setRoles([
         { value: 'admin', label: 'System Administrator', description: 'Full system access and user management' },
-        { value: 'lab_manager', label: 'Lab Manager', description: 'Full lab access and user management' },
-        { value: 'lab_technician', label: 'Lab Technician', description: 'Full CRUD on specimens, protocols, experiments, inventory' },
-        { value: 'bioinformatician', label: 'Bioinformatician', description: 'Full access to sequencing data and experiments' },
-        { value: 'researcher', label: 'Researcher', description: 'Read-only access to assigned projects' }
+        { value: 'facility_manager', label: 'Facility Manager', description: 'Oversight of animal care operations and lab management' },
+        { value: 'veterinarian', label: 'Veterinarian', description: 'Animal health monitoring and medical procedures' },
+        { value: 'researcher', label: 'Researcher', description: 'Study design, data analysis, and research oversight' },
+        { value: 'technician', label: 'Research Technician', description: 'Daily animal care, sample collection, and data entry' }
       ]);
     }
   };
@@ -113,9 +113,9 @@ const UserEditDialog = ({ open, user, onClose, onSuccess, onError }) => {
   const getRoleColor = (role) => {
     const colors = {
       admin: 'error',
-      lab_manager: 'warning',
-      lab_technician: 'primary',
-      bioinformatician: 'secondary',
+      facility_manager: 'warning',
+      technician: 'primary',
+      veterinarian: 'secondary',
       researcher: 'default'
     };
     return colors[role] || 'default';

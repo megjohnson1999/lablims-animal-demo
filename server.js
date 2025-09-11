@@ -160,28 +160,40 @@ app.post('/api/admin/deploy-schema', async (req, res) => {
   }
 });
 
-// Define routes
+// Define routes - Streamlined for Animal Research LIMS
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
-app.use('/api/collaborators', require('./routes/collaborators'));
-app.use('/api/projects', require('./routes/projects'));
+
+// Core Animal Research LIMS sections
+app.use('/api/animals', require('./routes/animals'));
+app.use('/api/housing', require('./routes/housing'));
+app.use('/api/studies', require('./routes/experimentalStudies')); // Unified studies (was experimental-studies)
+app.use('/api/groups', require('./routes/experimentalGroups')); // Unified groups (was experimental-groups)
 app.use('/api/specimens', require('./routes/specimens'));
-app.use('/api/patients', require('./routes/patients'));
+app.use('/api/biological-samples', require('./routes/biologicalSamples')); // New research organism samples system
+app.use('/api/samples', require('./routes/specimens')); // Animal research terminology
+app.use('/api/procedures', require('./routes/protocols')); // Unified procedures (protocols part)
+app.use('/api/protocols', require('./routes/protocols')); // Legacy alias for compatibility
+app.use('/api/experiments', require('./routes/experiments')); // Part of procedures
 app.use('/api/inventory', require('./routes/inventory'));
-app.use('/api/protocols', require('./routes/protocols'));
-app.use('/api/experiments', require('./routes/experiments'));
 app.use('/api/labels', require('./routes/labels'));
+
+// System functionality
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/import', require('./routes/import'));
-app.use('/api/import/comprehensive', require('./routes/comprehensiveImport'));
-app.use('/api/import/multi-file', require('./routes/multiFileImport'));
 app.use('/api/unified-import', require('./routes/unifiedImport'));
 app.use('/api/metadata', require('./routes/metadata'));
 app.use('/api/system-options', require('./routes/systemOptions'));
 app.use('/api/ids', require('./routes/ids'));
 app.use('/api/errors', require('./routes/errors'));
-app.use('/api/templates', require('./routes/templates'));
+
+// Legacy routes removed for streamlined animal research:
+// - /api/collaborators (now handled within studies)
+// - /api/projects (consolidated into /api/studies)
+// - /api/templates (simplified system)
+// - /api/import/comprehensive (consolidated)
+// - /api/import/multi-file (consolidated)
 
 // Serve static files from React build in production
 if (process.env.NODE_ENV === 'production') {

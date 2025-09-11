@@ -7,7 +7,7 @@
  */
 export const canEditLabData = (user) => {
   if (!user?.role) return false;
-  return ['admin', 'lab_manager', 'lab_technician'].includes(user.role);
+  return ['admin', 'facility_manager', 'technician'].includes(user.role);
 };
 
 /**
@@ -15,7 +15,7 @@ export const canEditLabData = (user) => {
  */
 export const canManageUsers = (user) => {
   if (!user?.role) return false;
-  return ['admin', 'lab_manager'].includes(user.role);
+  return ['admin', 'facility_manager'].includes(user.role);
 };
 
 /**
@@ -30,7 +30,7 @@ export const isAdmin = (user) => {
  */
 export const canViewAudit = (user) => {
   if (!user?.role) return false;
-  return ['admin', 'lab_manager'].includes(user.role);
+  return ['admin', 'facility_manager'].includes(user.role);
 };
 
 /**
@@ -38,5 +38,5 @@ export const canViewAudit = (user) => {
  */
 export const canImportData = (user) => {
   if (!user?.role) return false;
-  return ['admin', 'lab_manager', 'lab_technician'].includes(user.role);
+  return ['admin', 'facility_manager', 'technician'].includes(user.role);
 };
