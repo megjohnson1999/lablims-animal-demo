@@ -160,6 +160,88 @@ app.post('/api/admin/deploy-schema', async (req, res) => {
   }
 });
 
+// Admin endpoint to create initial admin user
+app.post('/api/admin/create-admin', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    
+    // Check if any admin users already exist
+    const existingAdmins = await pool.query(
+      "SELECT id, username FROM users WHERE role = 'admin' OR role = 'facility_manager'"
+    );
+
+    if (existingAdmins.rows.length > 0) {
+      return res.json({
+        success: false,
+        message: 'Admin users already exist',
+        existingAdmins: existingAdmins.rows.map(admin => admin.username)
+      });
+    }
+
+    // Generate secure password
+    function generateSecurePassword() {
+      const length = 16;
+      const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+      let password = '';
+      
+      password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+      password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+      password += '0123456789'[Math.floor(Math.random() * 10)];
+      password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+      
+      for (let i = password.length; i < length; i++) {
+        password += charset[Math.floor(Math.random() * charset.length)];
+      }
+      
+      return password.split('').sort(() => 0.5 - Math.random()).join('');
+    }
+
+    const adminPassword = process.env.ADMIN_PASSWORD || generateSecurePassword();
+    const generatedPassword = !process.env.ADMIN_PASSWORD;
+    
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(adminPassword, salt);
+    
+    // Insert admin user
+    const result = await pool.query(`
+      INSERT INTO users (
+        username, email, password, first_name, last_name, role, 
+        force_password_change, active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+      RETURNING id, username, email, role
+    `, [
+      'admin', 
+      'admin@lab.local', 
+      hashedPassword, 
+      'Lab', 
+      'Administrator', 
+      'facility_manager', 
+      generatedPassword,
+      true
+    ]);
+    
+    res.json({
+      success: true,
+      message: 'Admin user created successfully',
+      user: result.rows[0],
+      credentials: {
+        username: 'admin',
+        password: adminPassword,
+        forcePasswordChange: generatedPassword
+      }
+    });
+    
+  } catch (error) {
+    logger.error('Admin creation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Admin creation error',
+      error: error.message
+    });
+  }
+});
+
 // Define routes - Streamlined for Animal Research LIMS
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
