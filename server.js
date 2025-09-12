@@ -242,6 +242,27 @@ app.post('/api/admin/create-admin', async (req, res) => {
   }
 });
 
+// Admin endpoint to run specific schema fixes
+app.post('/api/admin/fix-missing-schema', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const fixSchemaSQL = fs.readFileSync('./fix-missing-schema.sql', 'utf8');
+    await pool.query(fixSchemaSQL);
+    
+    res.json({
+      success: true,
+      message: 'Missing schema elements added successfully!'
+    });
+  } catch (error) {
+    logger.error('Schema fix error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Schema fix error',
+      error: error.message
+    });
+  }
+});
+
 // Define routes - Streamlined for Animal Research LIMS
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
