@@ -68,16 +68,35 @@ const HousingDashboard = () => {
   const loadHousingData = async () => {
     try {
       setLoading(true);
+      console.log('Loading housing data...');
+      
       const [housingResponse, statsResponse] = await Promise.all([
-        housingAPI.getAll('?limit=100'),
-        housingAPI.getStats()
+        housingAPI.getAll('?limit=100').catch(err => {
+          console.error('Housing API error:', err);
+          if (err.response?.status === 401) {
+            toast.error('Please log in to view housing data');
+          }
+          return { data: [] };
+        }),
+        housingAPI.getStats().catch(err => {
+          console.error('Stats API error:', err);
+          if (err.response?.status === 401) {
+            toast.error('Please log in to view housing stats');
+          }
+          return { data: {} };
+        })
       ]);
       
-      setHousing(housingResponse.data.housing || housingResponse.data);
-      setStats(statsResponse.data);
+      console.log('Housing response:', housingResponse);
+      console.log('Stats response:', statsResponse);
+      
+      setHousing(housingResponse.data.housing || housingResponse.data || []);
+      setStats(statsResponse.data || {});
     } catch (err) {
+      console.error('Load housing data error:', err);
       toast.error('Failed to load housing data: ' + err.message);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };

@@ -126,6 +126,8 @@ const BiologicalSamplesList = () => {
   const loadSamples = async () => {
     try {
       setLoading(true);
+      console.log('Loading biological samples...');
+      
       const params = {
         page: page + 1,
         limit: rowsPerPage,
@@ -140,21 +142,40 @@ const BiologicalSamplesList = () => {
         }
       });
 
-      const response = await biologicalSamplesAPI.getAll(params);
-      setSamples(response.data.samples);
-      setTotalCount(response.data.pagination.total);
+      const response = await biologicalSamplesAPI.getAll(params).catch(err => {
+        console.error('Biological samples API error:', err);
+        if (err.response?.status === 401) {
+          toast.error('Please log in to view biological samples');
+        } else {
+          toast.error('Failed to load biological samples');
+        }
+        return { data: { samples: [], pagination: { total: 0 } } };
+      });
+      
+      console.log('Samples response:', response);
+      setSamples(response.data.samples || []);
+      setTotalCount(response.data.pagination?.total || 0);
     } catch (err) {
       console.error('Error loading biological samples:', err);
       toast.error('Failed to load biological samples');
     } finally {
+      console.log('Setting samples loading to false');
       setLoading(false);
     }
   };
 
   const loadStats = async () => {
     try {
-      const response = await biologicalSamplesAPI.getStats();
-      setStats(response.data);
+      console.log('Loading biological samples stats...');
+      const response = await biologicalSamplesAPI.getStats().catch(err => {
+        console.error('Biological samples stats API error:', err);
+        if (err.response?.status === 401) {
+          console.log('Stats require authentication');
+        }
+        return { data: {} };
+      });
+      console.log('Stats response:', response);
+      setStats(response.data || {});
     } catch (err) {
       console.error('Error loading stats:', err);
     }
