@@ -143,6 +143,7 @@ CREATE TABLE IF NOT EXISTS housing (
   cage_type VARCHAR(100),
   capacity INTEGER,
   current_occupancy INTEGER DEFAULT 0,
+  status VARCHAR(20) DEFAULT 'active',
   environmental_conditions TEXT,
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -946,6 +947,151 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ================================================================================
+-- BIOLOGICAL SAMPLES SCHEMA - RESEARCH ORGANISM FOCUSED
+-- Replaces the old "specimens" table with proper biological sample tracking
+-- ================================================================================
+
+-- Create biological_samples table optimized for research organism facilities
+CREATE TABLE IF NOT EXISTS biological_samples (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sample_number INTEGER UNIQUE,
+  
+  -- Core relationships
+  animal_id UUID NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
+  study_id UUID REFERENCES experimental_studies(id) ON DELETE CASCADE,
+  protocol_id UUID REFERENCES protocols(id) ON DELETE SET NULL,
+  
+  -- Sample identification
+  sample_barcode VARCHAR(100) UNIQUE,
+  parent_sample_id UUID REFERENCES biological_samples(id), -- For aliquots/sub-samples
+  
+  -- Sample type and collection info
+  sample_type VARCHAR(100) NOT NULL, -- blood, tissue, urine, serum, plasma, organ, etc.
+  anatomical_site VARCHAR(255), -- liver, brain, heart, femur, etc.
+  sample_description TEXT,
+  
+  -- Collection details
+  collection_date TIMESTAMP NOT NULL,
+  collection_method VARCHAR(255), -- necropsy, biopsy, blood draw, terminal bleed, etc.
+  collected_by VARCHAR(255) NOT NULL,
+  collection_protocol VARCHAR(255), -- reference to SOP
+  
+  -- Processing information
+  processing_date TIMESTAMP,
+  processing_method VARCHAR(255), -- fresh, frozen, fixed, paraffin-embedded, etc.
+  preservation_method VARCHAR(100), -- -80°C, -20°C, 4°C, RT, formalin, etc.
+  processed_by VARCHAR(255),
+  
+  -- Storage location
+  storage_location VARCHAR(255), -- freezer/room identifier
+  storage_container VARCHAR(100), -- rack, box, shelf
+  storage_position VARCHAR(50), -- A1, position 1-12, etc.
+  storage_temperature VARCHAR(20), -- -80°C, -20°C, 4°C, RT
+  
+  -- Sample quantity and quality
+  initial_volume_ml DECIMAL(10, 3),
+  current_volume_ml DECIMAL(10, 3),
+  initial_weight_mg DECIMAL(10, 3),
+  current_weight_mg DECIMAL(10, 3),
+  concentration_mg_ml DECIMAL(10, 3),
+  quality_score VARCHAR(50), -- excellent, good, fair, poor, degraded
+  
+  -- Sample status
+  status VARCHAR(50) DEFAULT 'available' CHECK (status IN ('available', 'in_use', 'depleted', 'contaminated', 'discarded')),
+  is_aliquot BOOLEAN DEFAULT FALSE,
+  number_of_aliquots INTEGER DEFAULT 0,
+  
+  -- Experimental context
+  treatment_group VARCHAR(255), -- control, treatment A, etc.
+  timepoint VARCHAR(100), -- baseline, 24h, 7d, terminal, etc.
+  collection_order INTEGER, -- for serial collections
+  
+  -- Quality control
+  contamination_check BOOLEAN DEFAULT FALSE,
+  contamination_notes TEXT,
+  integrity_check BOOLEAN DEFAULT FALSE,
+  integrity_notes TEXT,
+  
+  -- Usage tracking
+  times_thawed INTEGER DEFAULT 0,
+  last_accessed TIMESTAMP,
+  accessed_by VARCHAR(255),
+  
+  -- Regulatory and compliance
+  iacuc_protocol VARCHAR(100), -- IACUC protocol number
+  collection_approved_by VARCHAR(255),
+  disposal_date DATE,
+  disposal_method VARCHAR(255),
+  disposal_approved_by VARCHAR(255),
+  
+  -- Additional metadata (flexible JSON for specific research needs)
+  metadata JSONB DEFAULT '{}' NOT NULL,
+  
+  -- System fields
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID REFERENCES users(id),
+  
+  -- Constraints
+  CONSTRAINT valid_volumes CHECK (
+    (initial_volume_ml IS NULL OR initial_volume_ml >= 0) AND 
+    (current_volume_ml IS NULL OR current_volume_ml >= 0) AND
+    (current_volume_ml IS NULL OR initial_volume_ml IS NULL OR current_volume_ml <= initial_volume_ml)
+  ),
+  CONSTRAINT valid_weights CHECK (
+    (initial_weight_mg IS NULL OR initial_weight_mg >= 0) AND 
+    (current_weight_mg IS NULL OR current_weight_mg >= 0) AND
+    (current_weight_mg IS NULL OR initial_weight_mg IS NULL OR current_weight_mg <= initial_weight_mg)
+  )
+);
+
+-- Create sample aliquots table for tracking sub-samples
+CREATE TABLE IF NOT EXISTS sample_aliquots (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_sample_id UUID NOT NULL REFERENCES biological_samples(id) ON DELETE CASCADE,
+  aliquot_sample_id UUID NOT NULL REFERENCES biological_samples(id) ON DELETE CASCADE,
+  aliquot_number INTEGER NOT NULL,
+  volume_transferred_ml DECIMAL(10, 3),
+  weight_transferred_mg DECIMAL(10, 3),
+  created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID REFERENCES users(id),
+  purpose VARCHAR(255), -- analysis, storage, sharing, etc.
+  
+  UNIQUE(parent_sample_id, aliquot_number)
+);
+
+-- Sample usage/analysis tracking
+CREATE TABLE IF NOT EXISTS sample_usage (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sample_id UUID NOT NULL REFERENCES biological_samples(id) ON DELETE CASCADE,
+  usage_date TIMESTAMP NOT NULL,
+  used_by VARCHAR(255) NOT NULL,
+  analysis_type VARCHAR(255), -- RNA extraction, histology, PCR, etc.
+  volume_used_ml DECIMAL(10, 3),
+  weight_used_mg DECIMAL(10, 3),
+  purpose TEXT,
+  results_location TEXT, -- file path, lab notebook reference, etc.
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sample chain of custody for regulatory compliance
+CREATE TABLE IF NOT EXISTS sample_chain_of_custody (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sample_id UUID NOT NULL REFERENCES biological_samples(id) ON DELETE CASCADE,
+  event_date TIMESTAMP NOT NULL,
+  event_type VARCHAR(100) NOT NULL, -- collected, transferred, analyzed, stored, disposed
+  from_person VARCHAR(255),
+  to_person VARCHAR(255),
+  location VARCHAR(255),
+  purpose TEXT,
+  signature VARCHAR(255),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ================================================================================
 -- TRIGGERS
 -- ================================================================================
 
@@ -964,6 +1110,62 @@ CREATE TRIGGER update_housing_timestamp BEFORE UPDATE ON housing FOR EACH ROW EX
 CREATE TRIGGER update_experimental_studies_timestamp BEFORE UPDATE ON experimental_studies FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_experimental_groups_timestamp BEFORE UPDATE ON experimental_groups FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_animal_group_assignments_timestamp BEFORE UPDATE ON animal_group_assignments FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+-- Biological samples triggers
+CREATE TRIGGER update_biological_samples_timestamp BEFORE UPDATE ON biological_samples FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+-- Auto-generate sample numbers
+CREATE OR REPLACE FUNCTION generate_sample_number()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.sample_number IS NULL THEN
+    SELECT COALESCE(MAX(sample_number), 0) + 1 INTO NEW.sample_number FROM biological_samples;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER generate_sample_number_trigger
+  BEFORE INSERT ON biological_samples
+  FOR EACH ROW
+  EXECUTE FUNCTION generate_sample_number();
+
+-- Update current volume/weight when creating usage records
+CREATE OR REPLACE FUNCTION update_sample_quantities()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Update the current volume and weight after usage
+  UPDATE biological_samples 
+  SET 
+    current_volume_ml = CASE 
+      WHEN current_volume_ml IS NOT NULL AND NEW.volume_used_ml IS NOT NULL 
+      THEN GREATEST(0, current_volume_ml - NEW.volume_used_ml)
+      ELSE current_volume_ml 
+    END,
+    current_weight_mg = CASE 
+      WHEN current_weight_mg IS NOT NULL AND NEW.weight_used_mg IS NOT NULL 
+      THEN GREATEST(0, current_weight_mg - NEW.weight_used_mg)
+      ELSE current_weight_mg 
+    END,
+    last_accessed = NEW.usage_date,
+    accessed_by = NEW.used_by,
+    status = CASE 
+      WHEN (
+        (current_volume_ml IS NOT NULL AND current_volume_ml - COALESCE(NEW.volume_used_ml, 0) <= 0) OR
+        (current_weight_mg IS NOT NULL AND current_weight_mg - COALESCE(NEW.weight_used_mg, 0) <= 0)
+      ) THEN 'depleted'
+      ELSE status
+    END
+  WHERE id = NEW.sample_id;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_sample_quantities_trigger
+  AFTER INSERT ON sample_usage
+  FOR EACH ROW
+  EXECUTE FUNCTION update_sample_quantities();
 
 -- Metadata change logging function
 CREATE OR REPLACE FUNCTION log_specimen_metadata_changes()
@@ -1118,6 +1320,31 @@ BEGIN
   END IF;
 END $$;
 
+-- Biological Samples indexes
+CREATE INDEX IF NOT EXISTS idx_biological_samples_number ON biological_samples(sample_number);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_barcode ON biological_samples(sample_barcode);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_animal_id ON biological_samples(animal_id);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_study_id ON biological_samples(study_id);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_protocol_id ON biological_samples(protocol_id);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_parent_id ON biological_samples(parent_sample_id);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_type ON biological_samples(sample_type);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_anatomical_site ON biological_samples(anatomical_site);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_status ON biological_samples(status);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_collection_date ON biological_samples(collection_date);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_storage_location ON biological_samples(storage_location);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_treatment_group ON biological_samples(treatment_group);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_timepoint ON biological_samples(timepoint);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_animal_type ON biological_samples(animal_id, sample_type);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_study_timepoint ON biological_samples(study_id, timepoint);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_storage ON biological_samples(storage_location, storage_container, storage_position);
+CREATE INDEX IF NOT EXISTS idx_biological_samples_metadata_gin ON biological_samples USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_sample_aliquots_parent ON sample_aliquots(parent_sample_id);
+CREATE INDEX IF NOT EXISTS idx_sample_aliquots_aliquot ON sample_aliquots(aliquot_sample_id);
+CREATE INDEX IF NOT EXISTS idx_sample_usage_sample_id ON sample_usage(sample_id);
+CREATE INDEX IF NOT EXISTS idx_sample_usage_date ON sample_usage(usage_date);
+CREATE INDEX IF NOT EXISTS idx_sample_custody_sample_id ON sample_chain_of_custody(sample_id);
+CREATE INDEX IF NOT EXISTS idx_sample_custody_date ON sample_chain_of_custody(event_date);
+
 -- ================================================================================
 -- VIEWS
 -- ================================================================================
@@ -1262,6 +1489,110 @@ INSERT INTO patients (
   0, 'UNKNOWN-PATIENT', 'Unknown', 'Patient',
   'Default record for specimens with missing or invalid patient references'
 ) ON CONFLICT (patient_number) DO NOTHING;
+
+-- ================================================================================
+-- BIOLOGICAL SAMPLES VIEWS
+-- ================================================================================
+
+-- Comprehensive sample view with animal and study information
+CREATE OR REPLACE VIEW biological_samples_with_details AS
+SELECT 
+  bs.*,
+  a.animal_number,
+  a.species,
+  a.strain,
+  a.sex,
+  a.birth_date,
+  es.study_name,
+  es.principal_investigator,
+  u.username as created_by_username,
+  -- Calculate age at collection
+  CASE 
+    WHEN a.birth_date IS NOT NULL 
+    THEN EXTRACT(days FROM bs.collection_date - a.birth_date)
+    ELSE NULL 
+  END as age_at_collection_days,
+  -- Storage summary
+  CONCAT_WS(' / ', bs.storage_location, bs.storage_container, bs.storage_position) as full_storage_location,
+  -- Volume/weight remaining percentages
+  CASE 
+    WHEN bs.initial_volume_ml > 0 
+    THEN ROUND((bs.current_volume_ml / bs.initial_volume_ml * 100)::numeric, 1)
+    ELSE NULL 
+  END as volume_remaining_percent,
+  CASE 
+    WHEN bs.initial_weight_mg > 0 
+    THEN ROUND((bs.current_weight_mg / bs.initial_weight_mg * 100)::numeric, 1)
+    ELSE NULL 
+  END as weight_remaining_percent
+FROM biological_samples bs
+LEFT JOIN animals a ON bs.animal_id = a.id
+LEFT JOIN experimental_studies es ON bs.study_id = es.id  
+LEFT JOIN users u ON bs.created_by = u.id;
+
+-- Sample inventory summary view
+CREATE OR REPLACE VIEW sample_inventory_summary AS
+SELECT 
+  sample_type,
+  anatomical_site,
+  COUNT(*) as total_samples,
+  COUNT(CASE WHEN status = 'available' THEN 1 END) as available_samples,
+  COUNT(CASE WHEN status = 'depleted' THEN 1 END) as depleted_samples,
+  AVG(current_volume_ml) as avg_volume_ml,
+  AVG(current_weight_mg) as avg_weight_mg,
+  MIN(collection_date) as earliest_collection,
+  MAX(collection_date) as latest_collection
+FROM biological_samples
+GROUP BY sample_type, anatomical_site
+ORDER BY sample_type, anatomical_site;
+
+-- ================================================================================
+-- BIOLOGICAL SAMPLES REFERENCE DATA
+-- ================================================================================
+
+-- Insert common sample types for research organisms
+INSERT INTO system_options (category, option_value, display_text, description, is_active) VALUES
+('sample_type', 'blood_whole', 'Whole Blood', 'Fresh whole blood sample', true),
+('sample_type', 'blood_serum', 'Serum', 'Blood serum after coagulation', true),
+('sample_type', 'blood_plasma', 'Plasma', 'Blood plasma with anticoagulant', true),
+('sample_type', 'tissue_liver', 'Liver Tissue', 'Liver tissue sample', true),
+('sample_type', 'tissue_brain', 'Brain Tissue', 'Brain tissue sample', true),
+('sample_type', 'tissue_heart', 'Heart Tissue', 'Heart tissue sample', true),
+('sample_type', 'tissue_kidney', 'Kidney Tissue', 'Kidney tissue sample', true),
+('sample_type', 'tissue_lung', 'Lung Tissue', 'Lung tissue sample', true),
+('sample_type', 'tissue_spleen', 'Spleen Tissue', 'Spleen tissue sample', true),
+('sample_type', 'tissue_muscle', 'Muscle Tissue', 'Skeletal muscle tissue', true),
+('sample_type', 'tissue_fat', 'Adipose Tissue', 'Fat/adipose tissue', true),
+('sample_type', 'bone', 'Bone', 'Bone sample', true),
+('sample_type', 'bone_marrow', 'Bone Marrow', 'Bone marrow sample', true),
+('sample_type', 'urine', 'Urine', 'Urine sample', true),
+('sample_type', 'feces', 'Feces', 'Fecal sample', true),
+('sample_type', 'tissue_other', 'Other Tissue', 'Other tissue type', true),
+('sample_type', 'fluid_other', 'Other Fluid', 'Other body fluid', true) 
+ON CONFLICT (category, option_value) DO NOTHING;
+
+-- Insert collection methods
+INSERT INTO system_options (category, option_value, display_text, description, is_active) VALUES
+('collection_method', 'terminal_bleed', 'Terminal Bleed', 'Terminal blood collection at euthanasia', true),
+('collection_method', 'serial_bleed', 'Serial Blood Draw', 'Non-terminal blood collection', true),
+('collection_method', 'necropsy', 'Necropsy', 'Post-mortem tissue collection', true),
+('collection_method', 'biopsy', 'Biopsy', 'Tissue biopsy from live animal', true),
+('collection_method', 'natural_void', 'Natural Void', 'Naturally voided sample (urine/feces)', true),
+('collection_method', 'cage_collection', 'Cage Collection', 'Sample collected from cage', true),
+('collection_method', 'surgical', 'Surgical Collection', 'Surgically obtained sample', true)
+ON CONFLICT (category, option_value) DO NOTHING;
+
+-- Insert preservation methods
+INSERT INTO system_options (category, option_value, display_text, description, is_active) VALUES
+('preservation_method', 'fresh', 'Fresh', 'Fresh sample, no preservation', true),
+('preservation_method', 'frozen_minus80', 'Frozen -80°C', 'Frozen at -80°C', true),
+('preservation_method', 'frozen_minus20', 'Frozen -20°C', 'Frozen at -20°C', true),
+('preservation_method', 'refrigerated', 'Refrigerated 4°C', 'Stored at 4°C', true),
+('preservation_method', 'formalin_fixed', 'Formalin Fixed', '10% neutral buffered formalin', true),
+('preservation_method', 'paraffin_embedded', 'Paraffin Embedded', 'Formalin fixed, paraffin embedded', true),
+('preservation_method', 'rna_later', 'RNAlater', 'Preserved in RNAlater solution', true),
+('preservation_method', 'snap_frozen', 'Snap Frozen', 'Snap frozen in liquid nitrogen', true)
+ON CONFLICT (category, option_value) DO NOTHING;
 
 -- ================================================================================
 -- COMPLETION MESSAGE
