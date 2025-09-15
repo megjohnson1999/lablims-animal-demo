@@ -223,6 +223,27 @@ app.post('/api/admin/load-sample-data', async (req, res) => {
   }
 });
 
+// Admin endpoint to load basic sample data (animals and housing only)
+app.post('/api/admin/load-basic-sample-data', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const sampleDataSQL = fs.readFileSync('./load-basic-sample-data.sql', 'utf8');
+    await pool.query(sampleDataSQL);
+    
+    res.json({
+      success: true,
+      message: 'Basic sample data loaded successfully! You now have test animals and housing.'
+    });
+  } catch (error) {
+    logger.error('Basic sample data loading error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Basic sample data loading error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to create initial admin user
 app.post('/api/admin/create-admin', async (req, res) => {
   try {
