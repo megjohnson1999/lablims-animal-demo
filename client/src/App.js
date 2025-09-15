@@ -36,6 +36,7 @@ import BiologicalSampleDetail from './components/biologicalSamples/BiologicalSam
 import AnimalList from './components/animals/AnimalList';
 import AnimalForm from './components/animals/AnimalForm';
 import AnimalDetail from './components/animals/AnimalDetail';
+import AvailableAnimalsList from './components/animals/AvailableAnimalsList';
 
 // Housing Components
 import HousingDashboard from './components/housing/HousingDashboard';
@@ -206,6 +207,7 @@ function App() {
           {/* Animal Routes */}
           <Route path="animals">
             <Route index element={<AnimalList />} />
+            <Route path="available" element={<AvailableAnimalsList />} />
             <Route path="new" element={<AnimalForm />} />
             <Route path=":id" element={<AnimalDetail />} />
             <Route path=":id/edit" element={<AnimalForm />} />

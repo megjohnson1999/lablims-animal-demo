@@ -37,7 +37,8 @@ import {
   Pets as AnimalIcon,
   Psychology as StudyIcon,
   Group as GroupIcon,
-  Home as HousingIcon
+  Home as HousingIcon,
+  Search as SearchIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -89,6 +90,7 @@ const Layout = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
+    { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
     { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
     { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
     { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
