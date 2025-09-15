@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS animals (
   genotype VARCHAR(500),
   housing_id UUID,
   status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'deceased', 'transferred', 'retired')),
+  availability_status VARCHAR(20) DEFAULT 'available' CHECK (availability_status IN ('available', 'claimed', 'reserved', 'breeding', 'retired')),
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -262,6 +263,23 @@ CREATE TABLE IF NOT EXISTS animal_group_measurements (
   quality_flag VARCHAR(50) CHECK (quality_flag IN ('good', 'questionable', 'poor', 'excluded')),
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Animal claims table for researcher claiming system
+CREATE TABLE IF NOT EXISTS animal_claims (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  animal_id UUID NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
+  requested_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  study_id UUID REFERENCES experimental_studies(id) ON DELETE SET NULL,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied', 'cancelled')),
+  justification TEXT NOT NULL,
+  requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMP,
+  review_notes TEXT,
+  approved_until DATE, -- Optional: automatic release date
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Specimen table with ALL functionality (updated for animal research)
@@ -1258,6 +1276,10 @@ CREATE INDEX IF NOT EXISTS idx_group_treatments_group_id ON group_treatments(gro
 CREATE INDEX IF NOT EXISTS idx_group_measurements_group_id ON group_measurements(group_id);
 CREATE INDEX IF NOT EXISTS idx_animal_group_measurements_assignment_id ON animal_group_measurements(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_animal_group_measurements_measurement_id ON animal_group_measurements(measurement_id);
+CREATE INDEX IF NOT EXISTS idx_animal_claims_animal_id ON animal_claims(animal_id);
+CREATE INDEX IF NOT EXISTS idx_animal_claims_requested_by ON animal_claims(requested_by);
+CREATE INDEX IF NOT EXISTS idx_animal_claims_status ON animal_claims(status);
+CREATE INDEX IF NOT EXISTS idx_animal_claims_study_id ON animal_claims(study_id);
 CREATE INDEX IF NOT EXISTS idx_experimental_studies_created_by ON experimental_studies(created_by);
 
 -- Search field indexes for WHERE clause performance
@@ -1268,6 +1290,7 @@ CREATE INDEX IF NOT EXISTS idx_specimens_specimen_site ON specimens(specimen_sit
 CREATE INDEX IF NOT EXISTS idx_animals_species ON animals(species);
 CREATE INDEX IF NOT EXISTS idx_animals_strain ON animals(strain);
 CREATE INDEX IF NOT EXISTS idx_animals_status ON animals(status);
+CREATE INDEX IF NOT EXISTS idx_animals_availability_status ON animals(availability_status);
 CREATE INDEX IF NOT EXISTS idx_animals_sex ON animals(sex);
 -- Experimental group search indexes
 CREATE INDEX IF NOT EXISTS idx_experimental_studies_status ON experimental_studies(status);
