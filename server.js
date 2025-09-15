@@ -244,6 +244,32 @@ app.post('/api/admin/load-basic-sample-data', async (req, res) => {
   }
 });
 
+// Debug endpoint to check available animals (no auth required)
+app.get('/api/admin/debug-animals', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        a.id, a.animal_number, a.species, a.strain, a.availability_status, a.status,
+        h.location as housing_location
+      FROM animals a
+      LEFT JOIN housing h ON a.housing_id = h.id
+      WHERE a.availability_status = 'available' AND a.status = 'active'
+      LIMIT 10
+    `);
+    
+    res.json({
+      success: true,
+      count: result.rows.length,
+      animals: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to create initial admin user
 app.post('/api/admin/create-admin', async (req, res) => {
   try {
