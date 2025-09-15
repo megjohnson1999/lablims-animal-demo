@@ -181,6 +181,27 @@ app.post('/api/admin/fix-missing-schema', async (req, res) => {
   }
 });
 
+// Admin endpoint to load sample data for development/testing
+app.post('/api/admin/load-sample-data', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const sampleDataSQL = fs.readFileSync('./db/sample-data.sql', 'utf8');
+    await pool.query(sampleDataSQL);
+    
+    res.json({
+      success: true,
+      message: 'Sample data loaded successfully! You now have test animals, users, housing, and studies.'
+    });
+  } catch (error) {
+    logger.error('Sample data loading error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sample data loading error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to create initial admin user
 app.post('/api/admin/create-admin', async (req, res) => {
   try {
