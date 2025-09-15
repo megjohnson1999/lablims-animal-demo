@@ -160,6 +160,27 @@ app.post('/api/admin/deploy-schema', async (req, res) => {
   }
 });
 
+// Admin endpoint to apply missing schema migration 
+app.post('/api/admin/fix-missing-schema', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const migrationSQL = fs.readFileSync('./fix-missing-schema.sql', 'utf8');
+    await pool.query(migrationSQL);
+    
+    res.json({
+      success: true,
+      message: 'Missing schema elements fixed successfully! Housing and Biological Samples should now work.'
+    });
+  } catch (error) {
+    logger.error('Migration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Migration error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to create initial admin user
 app.post('/api/admin/create-admin', async (req, res) => {
   try {
