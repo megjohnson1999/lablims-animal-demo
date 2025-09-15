@@ -181,6 +181,27 @@ app.post('/api/admin/fix-missing-schema', async (req, res) => {
   }
 });
 
+// Admin endpoint to apply new schema changes for animal claiming
+app.post('/api/admin/apply-schema-changes', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const schemaChangesSQL = fs.readFileSync('./apply-schema-changes.sql', 'utf8');
+    await pool.query(schemaChangesSQL);
+    
+    res.json({
+      success: true,
+      message: 'Schema changes applied successfully! Animal claiming system is ready.'
+    });
+  } catch (error) {
+    logger.error('Schema changes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Schema changes error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to load sample data for development/testing
 app.post('/api/admin/load-sample-data', async (req, res) => {
   try {
