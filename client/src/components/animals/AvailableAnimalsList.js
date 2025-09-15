@@ -98,6 +98,8 @@ const AvailableAnimalsList = () => {
     try {
       setLoading(true);
       console.log('Loading available animals...');
+      console.log('Current user:', currentUser);
+      console.log('Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
       
       const params = {
         search,
@@ -113,13 +115,20 @@ const AvailableAnimalsList = () => {
         }
       });
 
+      console.log('Request params:', params);
       const response = await axios.get('/api/animal-claims/available', { params });
       console.log('Available animals response:', response);
       
       setAnimals(response.data.animals || []);
     } catch (err) {
       console.error('Error loading available animals:', err);
-      toast.error('Failed to load available animals');
+      console.error('Error details:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        message: err.message
+      });
+      toast.error(`Failed to load available animals: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -127,10 +136,18 @@ const AvailableAnimalsList = () => {
 
   const loadStats = async () => {
     try {
+      console.log('Loading stats...');
       const response = await axios.get('/api/animal-claims/stats');
+      console.log('Stats response:', response);
       setStats(response.data || {});
     } catch (err) {
       console.error('Error loading stats:', err);
+      console.error('Stats error details:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        message: err.message
+      });
     }
   };
 
