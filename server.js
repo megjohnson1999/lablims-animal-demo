@@ -164,7 +164,7 @@ app.post('/api/admin/deploy-schema', async (req, res) => {
 app.post('/api/admin/fix-missing-schema', async (req, res) => {
   try {
     const fs = require('fs');
-    const migrationSQL = fs.readFileSync('./fix-missing-schema.sql', 'utf8');
+    const migrationSQL = fs.readFileSync('./fix-missing-schema-simple.sql', 'utf8');
     await pool.query(migrationSQL);
     
     res.json({
