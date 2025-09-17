@@ -113,10 +113,10 @@ app.post('/api/admin/fix-id-functions', async (req, res) => {
       $$ LANGUAGE plpgsql;
     `;
 
-    await db.query(fixFunctions);
+    await pool.query(fixFunctions);
     
-    const collaboratorNext = await db.query("SELECT get_next_number('collaborator') as next_id");
-    const projectNext = await db.query("SELECT get_next_number('project') as next_id");
+    const collaboratorNext = await pool.query("SELECT get_next_number('collaborator') as next_id");
+    const projectNext = await pool.query("SELECT get_next_number('project') as next_id");
     
     res.json({
       success: true,
