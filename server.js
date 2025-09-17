@@ -380,7 +380,8 @@ app.use('/api/users', require('./routes/users'));
 // Core Animal Research LIMS sections
 app.use('/api/animals', require('./routes/animals'));
 app.use('/api/animal-claims', require('./routes/animalClaims'));
-app.use('/api/animal-requests', require('./routes/animalRequests'));
+// Temporarily disabled until database migration is applied
+// app.use('/api/animal-requests', require('./routes/animalRequests'));
 app.use('/api/housing', require('./routes/housing'));
 app.use('/api/studies', require('./routes/experimentalStudies')); // Unified studies (was experimental-studies)
 app.use('/api/groups', require('./routes/experimentalGroups')); // Unified groups (was experimental-groups)
