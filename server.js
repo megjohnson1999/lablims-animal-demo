@@ -57,13 +57,13 @@ app.get('/api/health', async (req, res) => {
   try {
     const dbRes = await pool.query('SELECT NOW()');
     res.json({
-      message: 'Pathogen Discovery Database API',
+      message: 'Animal Research LIMS API',
       dbConnection: 'Success',
       timestamp: dbRes.rows[0].now
     });
   } catch (err) {
     res.json({
-      message: 'Pathogen Discovery Database API',
+      message: 'Animal Research LIMS API',
       dbConnection: 'Failed',
       error: err.message
     });
