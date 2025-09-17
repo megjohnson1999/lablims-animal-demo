@@ -27,16 +27,20 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Initialize database in production
+// Initialize database with migrations
 async function initializeDatabase() {
   if (process.env.NODE_ENV === 'production') {
     try {
-      const fs = require('fs');
-      const schemaSQL = fs.readFileSync('./db/schema.sql', 'utf8');
-      await pool.query(schemaSQL);
-      logger.info('Core database schema applied successfully');
+      // Run migrations first (for existing databases)
+      const MigrationRunner = require('./db/migrations/migration_runner');
+      const migrationRunner = new MigrationRunner(process.env.DATABASE_URL);
+
+      await migrationRunner.runAllPendingMigrations();
+      await migrationRunner.close();
+
+      logger.info('Database migrations completed successfully');
     } catch (error) {
-      logger.error('Database schema error:', error);
+      logger.error('Database migration error:', error);
       // Don't exit - let server start anyway for debugging
     }
   }
@@ -380,8 +384,7 @@ app.use('/api/users', require('./routes/users'));
 // Core Animal Research LIMS sections
 app.use('/api/animals', require('./routes/animals'));
 app.use('/api/animal-claims', require('./routes/animalClaims'));
-// Temporarily disabled until database migration is applied
-// app.use('/api/animal-requests', require('./routes/animalRequests'));
+app.use('/api/animal-requests', require('./routes/animalRequests'));
 app.use('/api/housing', require('./routes/housing'));
 app.use('/api/studies', require('./routes/experimentalStudies')); // Unified studies (was experimental-studies)
 app.use('/api/groups', require('./routes/experimentalGroups')); // Unified groups (was experimental-groups)

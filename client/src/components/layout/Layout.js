@@ -92,7 +92,7 @@ const Layout = () => {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
     { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
-    // { text: 'Animal Requests', icon: <RequestIcon />, path: '/animal-requests' }, // Temporarily disabled
+    { text: 'Animal Requests', icon: <RequestIcon />, path: '/animal-requests' },
     { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
     { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
     { text: 'Groups', icon: <GroupIcon />, path: '/groups' },

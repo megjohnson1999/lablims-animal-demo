@@ -37,11 +37,10 @@ import AnimalList from './components/animals/AnimalList';
 import AnimalForm from './components/animals/AnimalForm';
 import AnimalDetail from './components/animals/AnimalDetail';
 import AvailableAnimalsList from './components/animals/AvailableAnimalsList';
-// Temporarily disabled animal request components
-// import AnimalRequestForm from './components/animals/AnimalRequestForm';
+import AnimalRequestForm from './components/animals/AnimalRequestForm';
 
 // Animal Request Pages
-// import AnimalRequests from './pages/AnimalRequests';
+import AnimalRequests from './pages/AnimalRequests';
 
 // Housing Components
 import HousingDashboard from './components/housing/HousingDashboard';
@@ -218,13 +217,11 @@ function App() {
             <Route path=":id/edit" element={<AnimalForm />} />
           </Route>
 
-          {/* Animal Request Routes - Temporarily disabled */}
-          {/*
+          {/* Animal Request Routes */}
           <Route path="animal-requests">
             <Route index element={<AnimalRequests />} />
             <Route path="new" element={<AnimalRequestForm />} />
           </Route>
-          */}
           
           {/* Housing Routes */}
           <Route path="housing">

@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Pre-commit hook to enforce migration-based schema changes
+# This ensures we always create migrations AND update core schema
+
+echo "🔍 Checking for database schema changes..."
+
+# Check if any .sql files in migrations/ are being added/modified
+migration_changes=$(git diff --cached --name-only | grep "db/migrations/.*\.sql$" || true)
+
+# Check if schema.sql is being modified
+schema_changes=$(git diff --cached --name-only | grep "db/schema.sql$" || true)
+
+# If migrations are added but schema.sql isn't updated
+if [[ -n "$migration_changes" && -z "$schema_changes" ]]; then
+    echo ""
+    echo "❌ MIGRATION POLICY VIOLATION"
+    echo ""
+    echo "📋 You're adding/modifying migrations but haven't updated db/schema.sql"
+    echo ""
+    echo "🎯 REQUIRED ACTIONS:"
+    echo "1. Add your changes to db/schema.sql (for new installations)"
+    echo "2. Ensure migration matches what would be in schema.sql"
+    echo "3. Run: git add db/schema.sql"
+    echo ""
+    echo "💡 WHY: New installations use schema.sql, existing ones use migrations"
+    echo "   Both paths must result in identical database structure"
+    echo ""
+    echo "🔧 To bypass this check (dangerous): git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+# If schema.sql is modified but no migration exists
+if [[ -n "$schema_changes" && -z "$migration_changes" ]]; then
+    echo ""
+    echo "⚠️  SCHEMA CHANGE WITHOUT MIGRATION"
+    echo ""
+    echo "📋 You're modifying db/schema.sql but haven't created a migration"
+    echo ""
+    echo "🎯 RECOMMENDED ACTIONS:"
+    echo "1. Create a migration file: db/migrations/XXX_description.sql"
+    echo "2. Include the same changes in the migration"
+    echo "3. Run: git add db/migrations/"
+    echo ""
+    echo "💡 WHY: Existing production databases need migrations to get your changes"
+    echo ""
+    echo "❓ Continue anyway? (y/N): "
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        echo "Commit cancelled. Please create a migration."
+        exit 1
+    fi
+fi
+
+echo "✅ Schema change policy compliance verified"
+exit 0
