@@ -398,6 +398,7 @@ app.use('/api/labels', require('./routes/labels'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/import', require('./routes/import'));
+app.use('/api/admin', require('./routes/admin-migration'));
 app.use('/api/unified-import', require('./routes/unifiedImport'));
 app.use('/api/metadata', require('./routes/metadata'));
 app.use('/api/system-options', require('./routes/systemOptions'));
