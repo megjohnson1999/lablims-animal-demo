@@ -27,23 +27,11 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Initialize database with migrations
+// Initialize database - temporarily disabled migrations for deployment
 async function initializeDatabase() {
-  if (process.env.NODE_ENV === 'production') {
-    try {
-      // Run migrations first (for existing databases)
-      const MigrationRunner = require('./db/migrations/migration_runner');
-      const migrationRunner = new MigrationRunner(process.env.DATABASE_URL);
-
-      await migrationRunner.runAllPendingMigrations();
-      await migrationRunner.close();
-
-      logger.info('Database migrations completed successfully');
-    } catch (error) {
-      logger.error('Database migration error:', error);
-      // Don't exit - let server start anyway for debugging
-    }
-  }
+  // Migrations temporarily disabled to fix startup timeout
+  // Will add back after server is running stable
+  console.log('🚀 Database initialization (migrations disabled for startup speed)');
 }
 
 // Middleware
@@ -401,8 +389,7 @@ app.use('/api/labels', require('./routes/labels'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/import', require('./routes/import'));
-// Temporarily disabled admin migration endpoint
-// app.use('/api/admin', require('./routes/admin-migration'));
+app.use('/api/admin', require('./routes/admin-migration'));
 app.use('/api/unified-import', require('./routes/unifiedImport'));
 app.use('/api/metadata', require('./routes/metadata'));
 app.use('/api/system-options', require('./routes/systemOptions'));

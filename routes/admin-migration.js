@@ -20,7 +20,7 @@ router.post('/apply-animal-requests-migration', authenticateToken, requireRole([
     console.log('Starting animal requests migration...');
 
     // Read the migration SQL file
-    const migrationPath = path.join(__dirname, '..', 'db', 'add_animal_requests.sql');
+    const migrationPath = path.join(__dirname, '..', 'db', 'migrations', '001_add_animal_requests.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
     // Execute the migration

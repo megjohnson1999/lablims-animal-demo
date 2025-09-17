@@ -34,7 +34,7 @@ class MigrationRunner {
   async getPendingMigrations() {
     const migrationsDir = path.join(__dirname);
     const migrationFiles = fs.readdirSync(migrationsDir)
-      .filter(file => file.endsWith('.sql'))
+      .filter(file => file.endsWith('.sql') && file !== 'migration_runner.js')
       .sort(); // Ensure consistent ordering
 
     const appliedMigrations = await this.getAppliedMigrations();
