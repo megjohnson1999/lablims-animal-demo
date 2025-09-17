@@ -3,7 +3,8 @@ const router = express.Router();
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const auth = require('../middleware/auth');
+const roleCheck = require('../middleware/roleCheck');
 
 // Initialize database connection
 const db = new Pool({
@@ -15,7 +16,7 @@ const db = new Pool({
  * POST /api/admin/apply-animal-requests-migration
  * Apply the animal requests database migration (admin only)
  */
-router.post('/apply-animal-requests-migration', authenticateToken, requireRole(['admin']), async (req, res) => {
+router.post('/apply-animal-requests-migration', auth, roleCheck(['admin']), async (req, res) => {
   try {
     console.log('Starting animal requests migration...');
 
@@ -48,7 +49,7 @@ router.post('/apply-animal-requests-migration', authenticateToken, requireRole([
  * GET /api/admin/check-animal-requests-tables
  * Check if animal requests tables exist (admin only)
  */
-router.get('/check-animal-requests-tables', authenticateToken, requireRole(['admin']), async (req, res) => {
+router.get('/check-animal-requests-tables', auth, roleCheck(['admin']), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT table_name

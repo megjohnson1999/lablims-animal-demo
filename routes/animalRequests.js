@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const auth = require('../middleware/auth');
+const roleCheck = require('../middleware/roleCheck');
 
 // Initialize database connection
 const db = new Pool({
@@ -17,7 +18,7 @@ const db = new Pool({
  * POST /api/animal-requests
  * Create a new animal request
  */
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const {
       title,
@@ -120,7 +121,7 @@ router.post('/', authenticateToken, async (req, res) => {
  * GET /api/animal-requests
  * Get animal requests with filtering and pagination
  */
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const {
       page = 1,
@@ -234,7 +235,7 @@ router.get('/', authenticateToken, async (req, res) => {
  * GET /api/animal-requests/:id
  * Get a specific animal request with details
  */
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -321,7 +322,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
  * GET /api/animal-requests/check-availability
  * Check availability of animals matching criteria
  */
-router.get('/check-availability', authenticateToken, async (req, res) => {
+router.get('/check-availability', auth, async (req, res) => {
   try {
     const {
       species,
@@ -439,7 +440,7 @@ router.get('/check-availability', authenticateToken, async (req, res) => {
  * PUT /api/animal-requests/:id/status
  * Update request status (facility managers only)
  */
-router.put('/:id/status', authenticateToken, requireRole(['facility_manager', 'admin']), async (req, res) => {
+router.put('/:id/status', auth, roleCheck(['facility_manager', 'admin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { status, review_notes } = req.body;
@@ -485,7 +486,7 @@ router.put('/:id/status', authenticateToken, requireRole(['facility_manager', 'a
  * POST /api/animal-requests/:id/allocate
  * Allocate animals to a request (facility managers only)
  */
-router.post('/:id/allocate', authenticateToken, requireRole(['facility_manager', 'admin']), async (req, res) => {
+router.post('/:id/allocate', auth, roleCheck(['facility_manager', 'admin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { animal_ids } = req.body;
@@ -569,7 +570,7 @@ router.post('/:id/allocate', authenticateToken, requireRole(['facility_manager',
  * GET /api/animal-requests/stats
  * Get request statistics (facility managers only)
  */
-router.get('/stats', authenticateToken, requireRole(['facility_manager', 'admin']), async (req, res) => {
+router.get('/stats', auth, roleCheck(['facility_manager', 'admin']), async (req, res) => {
   try {
     const statsQuery = `
       SELECT
