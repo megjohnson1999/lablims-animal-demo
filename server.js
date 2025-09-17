@@ -262,6 +262,30 @@ app.get('/api/admin/debug-animals', async (req, res) => {
   }
 });
 
+// Temporary endpoint to apply animal requests migration (no auth required)
+app.post('/api/admin/apply-migration-temp', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const migrationPath = path.join(__dirname, 'db', 'migrations', '001_add_animal_requests.sql');
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+
+    await pool.query(migrationSQL);
+
+    res.json({
+      success: true,
+      message: 'Animal requests migration applied successfully!',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Migration error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to create initial admin user
 app.post('/api/admin/create-admin', async (req, res) => {
   try {
