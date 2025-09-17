@@ -38,7 +38,8 @@ import {
   Psychology as StudyIcon,
   Group as GroupIcon,
   Home as HousingIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  RequestPage as RequestIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -91,6 +92,7 @@ const Layout = () => {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
     { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
+    { text: 'Animal Requests', icon: <RequestIcon />, path: '/animal-requests' },
     { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
     { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
     { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
