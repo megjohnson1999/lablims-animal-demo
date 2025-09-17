@@ -98,20 +98,20 @@ router.get('/available', auth, async (req, res) => {
         h.location as housing_location,
         h.housing_number,
         -- Calculate age in days for sorting/filtering
-        CASE 
-          WHEN a.birth_date IS NOT NULL 
-          THEN EXTRACT(days FROM CURRENT_DATE - a.birth_date)::integer 
-          ELSE NULL 
+        CASE
+          WHEN a.birth_date IS NOT NULL
+          THEN (CURRENT_DATE - a.birth_date)::integer
+          ELSE NULL
         END as age_days,
         -- Format for display
-        CASE 
+        CASE
           WHEN a.birth_date IS NOT NULL THEN
-            CASE 
-              WHEN EXTRACT(days FROM CURRENT_DATE - a.birth_date) < 30 
-              THEN EXTRACT(days FROM CURRENT_DATE - a.birth_date)::text || ' days'
-              WHEN EXTRACT(days FROM CURRENT_DATE - a.birth_date) < 365 
-              THEN (EXTRACT(days FROM CURRENT_DATE - a.birth_date) / 30)::integer::text || ' months'
-              ELSE (EXTRACT(days FROM CURRENT_DATE - a.birth_date) / 365)::integer::text || ' years'
+            CASE
+              WHEN (CURRENT_DATE - a.birth_date) < 30
+              THEN (CURRENT_DATE - a.birth_date)::text || ' days'
+              WHEN (CURRENT_DATE - a.birth_date) < 365
+              THEN ((CURRENT_DATE - a.birth_date) / 30)::integer::text || ' months'
+              ELSE ((CURRENT_DATE - a.birth_date) / 365)::integer::text || ' years'
             END
           ELSE 'Unknown'
         END as age_display
