@@ -39,6 +39,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { animalAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import AnimalMeasurements from '../measurements/AnimalMeasurements';
 
 const AnimalDetail = () => {
   const navigate = useNavigate();
@@ -277,8 +278,7 @@ const AnimalDetail = () => {
       <Card>
         <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
           <Tab label={`Specimens (${specimens.length})`} />
-          <Tab label={`Weights (${weights.length})`} />
-          <Tab label={`Observations (${observations.length})`} />
+          <Tab label="Measurements" />
           <Tab label="Breeding" />
         </Tabs>
 
@@ -342,133 +342,13 @@ const AnimalDetail = () => {
             </Box>
           )}
 
-          {/* Weights Tab */}
+          {/* Measurements Tab */}
           {activeTab === 1 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Weight History</Typography>
-                {canEdit && (
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    onClick={() => setWeightDialogOpen(true)}
-                  >
-                    Add Weight
-                  </Button>
-                )}
-              </Box>
-              {weights.length === 0 ? (
-                <Typography color="textSecondary" align="center">
-                  No weight records for this animal
-                </Typography>
-              ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Weight (g)</TableCell>
-                        <TableCell>Body Condition</TableCell>
-                        <TableCell>Measured By</TableCell>
-                        <TableCell>Notes</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {weights.map((weight) => (
-                        <TableRow key={weight.id}>
-                          <TableCell>
-                            {new Date(weight.measurement_date).toLocaleDateString()}
-                            <Typography variant="caption" display="block" color="textSecondary">
-                              {weight.days_ago} days ago
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <WeightIcon fontSize="small" />
-                              {weight.weight_grams}g
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            {weight.body_condition_score ? `${weight.body_condition_score}/5` : 'Not scored'}
-                          </TableCell>
-                          <TableCell>{weight.measured_by}</TableCell>
-                          <TableCell>{weight.notes || 'No notes'}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Box>
-          )}
-
-          {/* Observations Tab */}
-          {activeTab === 2 && (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Health Observations</Typography>
-                {canEdit && (
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    onClick={() => setObservationDialogOpen(true)}
-                  >
-                    Add Observation
-                  </Button>
-                )}
-              </Box>
-              {observations.length === 0 ? (
-                <Typography color="textSecondary" align="center">
-                  No observations recorded for this animal
-                </Typography>
-              ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Type</TableCell>
-                        <TableCell>Finding</TableCell>
-                        <TableCell>Severity</TableCell>
-                        <TableCell>Action Taken</TableCell>
-                        <TableCell>Observer</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {observations.map((obs) => (
-                        <TableRow key={obs.id}>
-                          <TableCell>
-                            {new Date(obs.observation_date).toLocaleDateString()}
-                            <Typography variant="caption" display="block" color="textSecondary">
-                              {obs.days_ago} days ago
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{obs.observation_type}</TableCell>
-                          <TableCell>{obs.finding}</TableCell>
-                          <TableCell>
-                            {obs.severity && (
-                              <Chip
-                                label={obs.severity}
-                                size="small"
-                                color={obs.severity === 'high' ? 'error' : obs.severity === 'medium' ? 'warning' : 'default'}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell>{obs.action_taken || 'None'}</TableCell>
-                          <TableCell>{obs.observed_by}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Box>
+            <AnimalMeasurements animalId={id} animalInfo={animal} />
           )}
 
           {/* Breeding Tab */}
-          {activeTab === 3 && (
+          {activeTab === 2 && (
             <Box>
               <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <FamilyIcon />
