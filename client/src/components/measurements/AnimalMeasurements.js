@@ -123,6 +123,11 @@ const AnimalMeasurements = ({ animalId, animalInfo }) => {
       setMeasurements(response.data.measurements || []);
     } catch (error) {
       console.error('Error loading measurements:', error);
+      if (error.response?.status === 404 || error.message.includes('measurements')) {
+        // Measurement tables don't exist yet - migration not applied
+        setMeasurements([]);
+        return;
+      }
       toast.error('Failed to load measurements');
     }
   };
@@ -133,6 +138,11 @@ const AnimalMeasurements = ({ animalId, animalInfo }) => {
       setMeasurementTypes(response.data.measurement_types || []);
     } catch (error) {
       console.error('Error loading measurement types:', error);
+      if (error.response?.status === 404 || error.message.includes('measurements')) {
+        // Measurement tables don't exist yet - migration not applied
+        setMeasurementTypes([]);
+        return;
+      }
     }
   };
 
@@ -328,6 +338,16 @@ const AnimalMeasurements = ({ animalId, animalInfo }) => {
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
         </Box>
+      ) : measurements.length === 0 && measurementTypes.length === 0 ? (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Measurements System Not Available
+          </Typography>
+          <Typography variant="body2">
+            The time series measurement tracking system is not yet configured for this installation.
+            Please contact your system administrator to apply the measurement system migration.
+          </Typography>
+        </Alert>
       ) : (
         <>
           {tabValue === 0 && (

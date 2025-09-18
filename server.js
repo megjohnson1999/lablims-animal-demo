@@ -27,11 +27,39 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Initialize database - temporarily disabled migrations for deployment
+// Initialize database - apply time series migration if needed
 async function initializeDatabase() {
-  // Migrations temporarily disabled to fix startup timeout
-  // Will add back after server is running stable
-  console.log('🚀 Database initialization (migrations disabled for startup speed)');
+  try {
+    console.log('🚀 Database initialization - checking for time series tables...');
+
+    // Check if measurement tables exist
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'animal_measurements'
+      );
+    `);
+
+    if (!tableCheck.rows[0].exists) {
+      console.log('📊 Time series tables missing - applying migration...');
+
+      // Read and apply the migration
+      const fs = require('fs');
+      const path = require('path');
+      const migrationPath = path.join(__dirname, 'db', 'migrations', 'add_time_series_measurements.sql');
+      const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+
+      await pool.query(migrationSQL);
+
+      console.log('✅ Time series measurement system migration applied successfully');
+    } else {
+      console.log('✅ Time series tables already exist - skipping migration');
+    }
+
+  } catch (error) {
+    console.error('❌ Database initialization error:', error.message);
+    // Don't fail startup if migration fails - just log it
+  }
 }
 
 // Middleware

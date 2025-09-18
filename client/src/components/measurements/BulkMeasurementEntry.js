@@ -106,6 +106,11 @@ const BulkMeasurementEntry = () => {
 
     } catch (error) {
       console.error('Error loading data:', error);
+      if (error.response?.status === 404 || error.message.includes('measurements')) {
+        // Measurement tables don't exist yet - migration not applied
+        setLoading(false);
+        return;
+      }
       toast.error('Failed to load initial data');
     } finally {
       setLoading(false);
@@ -334,6 +339,20 @@ const BulkMeasurementEntry = () => {
     return (
       <Alert severity="error">
         You do not have permission to add measurements. Please contact your system administrator.
+      </Alert>
+    );
+  }
+
+  if (measurementTypes.length === 0 && !loading) {
+    return (
+      <Alert severity="info">
+        <Typography variant="h6" gutterBottom>
+          Measurement System Not Available
+        </Typography>
+        <Typography variant="body2">
+          The bulk measurement entry system is not yet configured for this installation.
+          Please contact your system administrator to apply the measurement system migration.
+        </Typography>
       </Alert>
     );
   }
