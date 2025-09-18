@@ -91,7 +91,7 @@ const Layout = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
-    { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
+    { text: 'Find Animals', icon: <SearchIcon />, path: '/animals/find' },
     { text: 'Animal Requests', icon: <RequestIcon />, path: '/animal-requests' },
     { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
     { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
