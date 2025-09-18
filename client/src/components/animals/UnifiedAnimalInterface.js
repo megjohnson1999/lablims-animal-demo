@@ -252,10 +252,11 @@ const UnifiedAnimalInterface = () => {
 
   const handleRequestAnimals = () => {
     // Pre-fill request form with search criteria
+    const qty = parseInt(searchCriteria.quantity_needed) || 1;
     setRequestData(prev => ({
       ...prev,
-      title: `${searchCriteria.quantity_needed} ${searchCriteria.species === 'Mus musculus' ? 'Mice' : 'Rats'}${searchCriteria.strain ? ` (${searchCriteria.strain})` : ''}`,
-      description: `Requesting ${searchCriteria.quantity_needed} ${searchCriteria.species === 'Mus musculus' ? 'mice' : 'rats'}${searchCriteria.strain ? ` of strain ${searchCriteria.strain}` : ''}${searchCriteria.sex !== 'any' ? `, ${searchCriteria.sex === 'M' ? 'male' : 'female'} only` : ''}.`
+      title: `${qty} ${searchCriteria.species === 'Mus musculus' ? 'Mice' : 'Rats'}${searchCriteria.strain ? ` (${searchCriteria.strain})` : ''}`,
+      description: `Requesting ${qty} ${searchCriteria.species === 'Mus musculus' ? 'mice' : 'rats'}${searchCriteria.strain ? ` of strain ${searchCriteria.strain}` : ''}${searchCriteria.sex !== 'any' ? `, ${searchCriteria.sex === 'M' ? 'male' : 'female'} only` : ''}.`
     }));
     setRequestDialogOpen(true);
   };
@@ -280,7 +281,7 @@ const UnifiedAnimalInterface = () => {
         strain: searchCriteria.strain,
         sex: searchCriteria.sex === 'any' ? null : searchCriteria.sex,
         genotype: searchCriteria.genotype || null,
-        quantity_requested: searchCriteria.quantity_needed,
+        quantity_requested: parseInt(searchCriteria.quantity_needed) || 1,
         min_age_days: searchCriteria.min_age_days || null,
         max_age_days: searchCriteria.max_age_days || null,
 
@@ -335,7 +336,8 @@ const UnifiedAnimalInterface = () => {
   };
 
   const hasMatchingAnimals = availableAnimals.length > 0;
-  const hasEnoughAnimals = availableAnimals.length >= searchCriteria.quantity_needed;
+  const quantityNeeded = parseInt(searchCriteria.quantity_needed) || 1;
+  const hasEnoughAnimals = availableAnimals.length >= quantityNeeded;
 
   return (
     <Box className="page-container">
@@ -406,7 +408,21 @@ const UnifiedAnimalInterface = () => {
               type="number"
               label="Quantity Needed"
               value={searchCriteria.quantity_needed}
-              onChange={(e) => handleCriteriaChange('quantity_needed', parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty value temporarily, default to 1 only when empty and field loses focus
+                handleCriteriaChange('quantity_needed', value === '' ? '' : parseInt(value) || 1);
+              }}
+              onBlur={(e) => {
+                // Set to 1 if empty when user leaves the field
+                if (e.target.value === '' || parseInt(e.target.value) < 1) {
+                  handleCriteriaChange('quantity_needed', 1);
+                }
+              }}
+              onFocus={(e) => {
+                // Select all text when user focuses on the field
+                e.target.select();
+              }}
               inputProps={{ min: 1, max: 100 }}
             />
           </Grid>
@@ -499,7 +515,7 @@ const UnifiedAnimalInterface = () => {
                           {hasEnoughAnimals ? (
                             <strong>Great! Found {availableAnimals.length} available animals matching your criteria.</strong>
                           ) : (
-                            <strong>Found {availableAnimals.length} available animals, but you need {searchCriteria.quantity_needed}.</strong>
+                            <strong>Found {availableAnimals.length} available animals, but you need {quantityNeeded}.</strong>
                           )}
                         </Typography>
                         <Typography variant="body2">
@@ -518,7 +534,7 @@ const UnifiedAnimalInterface = () => {
                             startIcon={<AssignmentIcon />}
                             onClick={handleRequestAnimals}
                           >
-                            Request {searchCriteria.quantity_needed} Animals
+                            Request {quantityNeeded} Animals
                           </Button>
                         )}
                         <Button
@@ -744,7 +760,7 @@ const UnifiedAnimalInterface = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Submit a request for{' '}
             <strong>
-              {searchCriteria.quantity_needed} {searchCriteria.species === 'Mus musculus' ? 'mice' : 'rats'}
+              {parseInt(searchCriteria.quantity_needed) || 1} {searchCriteria.species === 'Mus musculus' ? 'mice' : 'rats'}
               {searchCriteria.strain ? ` (${searchCriteria.strain})` : ''}
             </strong>
           </Typography>
