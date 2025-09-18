@@ -42,7 +42,8 @@ import {
   Assignment as ScheduleIcon,
   Refresh as RefreshIcon,
   Download as ExportIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  ShowChart as ShowChartIcon
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -52,6 +53,7 @@ import { canEditLabData } from '../../utils/roleUtils';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { formatDate } from '../../utils/helpers';
+import MeasurementCharts from './MeasurementCharts';
 
 const AnimalMeasurements = ({ animalId, animalInfo }) => {
   const { currentUser } = useAuth();
@@ -319,6 +321,7 @@ const AnimalMeasurements = ({ animalId, animalInfo }) => {
       <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)} sx={{ mb: 2 }}>
         <Tab label="Table View" icon={<TimelineIcon />} />
         <Tab label="By Type" icon={<TrendingUpIcon />} />
+        <Tab label="Charts" icon={<ShowChartIcon />} />
       </Tabs>
 
       {loading ? (
@@ -464,6 +467,11 @@ const AnimalMeasurements = ({ animalId, animalInfo }) => {
                 })
               )}
             </Grid>
+          )}
+
+          {tabValue === 2 && (
+            // Charts view
+            <MeasurementCharts animalId={animalId} animalInfo={animalInfo} />
           )}
         </>
       )}
