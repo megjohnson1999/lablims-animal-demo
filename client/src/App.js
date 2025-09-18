@@ -38,6 +38,7 @@ import AnimalForm from './components/animals/AnimalForm';
 import AnimalDetail from './components/animals/AnimalDetail';
 import UnifiedAnimalInterface from './components/animals/UnifiedAnimalInterface';
 import AnimalRequestForm from './components/animals/AnimalRequestForm';
+import BulkMeasurementEntry from './components/measurements/BulkMeasurementEntry';
 
 // Animal Request Pages
 import AnimalRequests from './pages/AnimalRequests';
@@ -222,6 +223,8 @@ function App() {
             <Route index element={<AnimalRequests />} />
             <Route path="new" element={<AnimalRequestForm />} />
           </Route>
+          {/* Bulk Measurement Entry */}
+          <Route path="bulk-measurements" element={<BulkMeasurementEntry />} />
           
           {/* Housing Routes */}
           <Route path="housing">
