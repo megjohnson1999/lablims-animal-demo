@@ -3,6 +3,7 @@ const router = express.Router();
 const { Pool } = require('pg');
 const auth = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
+const notificationRoutes = require('./notifications');
 
 // Initialize database connection
 const db = new Pool({
@@ -468,6 +469,14 @@ router.put('/:id/status', auth, roleCheck(['facility_manager', 'admin']), async 
       return res.status(404).json({ message: 'Animal request not found' });
     }
 
+    // Create notification for status change
+    try {
+      await notificationRoutes.createRequestStatusNotification(id, status, req.user.id, review_notes);
+    } catch (notificationError) {
+      console.error('Error creating status notification:', notificationError);
+      // Don't fail the main operation if notification fails
+    }
+
     res.json({
       message: 'Request status updated successfully',
       request: result.rows[0]
@@ -547,6 +556,14 @@ router.post('/:id/allocate', auth, roleCheck(['facility_manager', 'admin']), asy
       // Commit transaction
       await db.query('COMMIT');
 
+      // Create notification for animal assignment
+      try {
+        await notificationRoutes.createAnimalAssignmentNotification(id, animal_ids, req.user.id);
+      } catch (notificationError) {
+        console.error('Error creating assignment notification:', notificationError);
+        // Don't fail the main operation if notification fails
+      }
+
       res.json({
         message: `Successfully allocated ${animal_ids.length} animals to request`,
         allocations: allocationsResult.rows
@@ -561,6 +578,404 @@ router.post('/:id/allocate', auth, roleCheck(['facility_manager', 'admin']), asy
     console.error('Error allocating animals:', error);
     res.status(500).json({
       message: 'Failed to allocate animals',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/animal-requests/:id/suggest-animals
+ * Get intelligent animal suggestions for a request (facility managers only)
+ */
+router.post('/:id/suggest-animals', auth, roleCheck(['facility_manager', 'admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get request details
+    const requestResult = await db.query('SELECT * FROM animal_requests WHERE id = $1', [id]);
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Animal request not found' });
+    }
+
+    const request = requestResult.rows[0];
+    const remainingQuantity = request.quantity_requested - (request.quantity_allocated || 0);
+
+    if (remainingQuantity <= 0) {
+      return res.json({
+        suggestions: [],
+        message: 'Request is already fully fulfilled'
+      });
+    }
+
+    // Build query for exact matches
+    let whereClause = `WHERE a.availability_status = 'available' AND a.status = 'active'`;
+    const values = [];
+    let paramCount = 0;
+
+    // Primary criteria
+    paramCount++;
+    whereClause += ` AND a.species = $${paramCount}`;
+    values.push(request.species);
+
+    // Strain - check primary and alternatives
+    const strainOptions = [request.strain, ...(request.strain_alternatives || [])];
+    if (strainOptions.length > 0) {
+      paramCount++;
+      whereClause += ` AND a.strain = ANY($${paramCount})`;
+      values.push(strainOptions);
+    }
+
+    // Sex
+    if (request.sex && request.sex !== 'any') {
+      paramCount++;
+      whereClause += ` AND a.sex = $${paramCount}`;
+      values.push(request.sex);
+    }
+
+    // Genotype - check primary and alternatives
+    const genotypeOptions = [request.genotype, ...(request.genotype_alternatives || [])].filter(Boolean);
+    if (genotypeOptions.length > 0) {
+      paramCount++;
+      whereClause += ` AND (a.genotype IS NULL OR a.genotype = ANY($${paramCount}))`;
+      values.push(genotypeOptions);
+    }
+
+    // Age filtering
+    if (request.min_age_days || request.max_age_days) {
+      whereClause += ` AND a.birth_date IS NOT NULL`;
+
+      if (request.min_age_days) {
+        const minDays = request.age_flexibility ? request.min_age_days * 0.9 : request.min_age_days;
+        paramCount++;
+        whereClause += ` AND (CURRENT_DATE - a.birth_date) >= $${paramCount}`;
+        values.push(minDays);
+      }
+
+      if (request.max_age_days) {
+        const maxDays = request.age_flexibility ? request.max_age_days * 1.1 : request.max_age_days;
+        paramCount++;
+        whereClause += ` AND (CURRENT_DATE - a.birth_date) <= $${paramCount}`;
+        values.push(maxDays);
+      }
+    }
+
+    // Get suggested animals with housing info
+    const suggestionsQuery = `
+      SELECT
+        a.*,
+        h.location as housing_location,
+        h.housing_number,
+        CASE
+          WHEN a.strain = $${paramCount + 1} THEN 'exact'
+          WHEN a.strain = ANY($${paramCount + 2}) THEN 'alternative_strain'
+          ELSE 'other'
+        END as match_type,
+        CASE
+          WHEN a.birth_date IS NOT NULL
+          THEN (CURRENT_DATE - a.birth_date)::integer
+          ELSE NULL
+        END as age_days
+      FROM animals a
+      LEFT JOIN housing h ON a.housing_id = h.id
+      ${whereClause}
+      ORDER BY
+        match_type,
+        CASE WHEN a.genotype = $${paramCount + 3} THEN 0 ELSE 1 END,
+        ABS(COALESCE((CURRENT_DATE - a.birth_date)::integer, ${(request.min_age_days + request.max_age_days) / 2 || 60}) - ${(request.min_age_days + request.max_age_days) / 2 || 60}),
+        a.animal_number
+      LIMIT ${remainingQuantity + 10}
+    `;
+
+    values.push(request.strain, request.strain_alternatives || [], request.genotype || '');
+    const suggestions = await db.query(suggestionsQuery, values);
+
+    // Group suggestions by housing location for efficiency
+    const groupedSuggestions = suggestions.rows.reduce((groups, animal) => {
+      const location = animal.housing_location || 'Unknown';
+      if (!groups[location]) groups[location] = [];
+      groups[location].push(animal);
+      return groups;
+    }, {});
+
+    res.json({
+      suggestions: suggestions.rows,
+      grouped_by_location: groupedSuggestions,
+      remaining_quantity: remainingQuantity,
+      total_suggested: suggestions.rows.length,
+      exact_matches: suggestions.rows.filter(a => a.match_type === 'exact').length
+    });
+
+  } catch (error) {
+    console.error('Error getting animal suggestions:', error);
+    res.status(500).json({
+      message: 'Failed to get animal suggestions',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/animal-requests/bulk-assign
+ * Assign multiple animals to multiple requests efficiently (facility managers only)
+ */
+router.post('/bulk-assign', auth, roleCheck(['facility_manager', 'admin']), async (req, res) => {
+  try {
+    const { assignments } = req.body;
+    // assignments: [{ request_id, animal_ids }]
+
+    if (!assignments || !Array.isArray(assignments) || assignments.length === 0) {
+      return res.status(400).json({ message: 'Assignments array is required' });
+    }
+
+    // Start transaction
+    await db.query('BEGIN');
+
+    try {
+      const results = [];
+      const allAnimalIds = [];
+
+      // Collect all animal IDs to check availability
+      assignments.forEach(assignment => {
+        allAnimalIds.push(...assignment.animal_ids);
+      });
+
+      // Verify all animals are available
+      const animalCheckQuery = `
+        SELECT id, animal_number, availability_status
+        FROM animals
+        WHERE id = ANY($1)
+        AND availability_status = 'available'
+        AND status = 'active'
+      `;
+      const availableAnimals = await db.query(animalCheckQuery, [allAnimalIds]);
+
+      if (availableAnimals.rows.length !== allAnimalIds.length) {
+        const unavailableIds = allAnimalIds.filter(id =>
+          !availableAnimals.rows.some(animal => animal.id === id)
+        );
+        throw new Error(`Some animals are not available: ${unavailableIds.join(', ')}`);
+      }
+
+      // Process each assignment
+      for (const assignment of assignments) {
+        const { request_id, animal_ids } = assignment;
+
+        // Verify request exists
+        const requestResult = await db.query('SELECT * FROM animal_requests WHERE id = $1', [request_id]);
+        if (requestResult.rows.length === 0) {
+          throw new Error(`Request ${request_id} not found`);
+        }
+
+        // Update animal availability status
+        await db.query(
+          'UPDATE animals SET availability_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($2)',
+          ['claimed', animal_ids]
+        );
+
+        // Create allocations
+        const allocationValues = animal_ids.map((animalId, index) =>
+          `($1, $${index + 2}, $${animal_ids.length + 2})`
+        ).join(', ');
+
+        const insertAllocationsQuery = `
+          INSERT INTO animal_request_allocations (request_id, animal_id, allocated_by)
+          VALUES ${allocationValues}
+          RETURNING *
+        `;
+
+        const allocationParams = [request_id, ...animal_ids, req.user.id];
+        const allocationsResult = await db.query(insertAllocationsQuery, allocationParams);
+
+        // Update request status if fully fulfilled
+        const request = requestResult.rows[0];
+        const newAllocatedCount = (request.quantity_allocated || 0) + animal_ids.length;
+
+        let newStatus = request.status;
+        if (newAllocatedCount >= request.quantity_requested) {
+          newStatus = 'fulfilled';
+          // Set fulfilled timestamp
+          await db.query(
+            'UPDATE animal_requests SET status = $1, fully_fulfilled_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [newStatus, request_id]
+          );
+        } else if (newAllocatedCount > (request.quantity_allocated || 0)) {
+          newStatus = 'partially_fulfilled';
+          await db.query(
+            'UPDATE animal_requests SET status = $1 WHERE id = $2',
+            [newStatus, request_id]
+          );
+        }
+
+        results.push({
+          request_id,
+          animals_assigned: animal_ids.length,
+          new_status: newStatus,
+          allocations: allocationsResult.rows
+        });
+      }
+
+      // Commit transaction
+      await db.query('COMMIT');
+
+      res.json({
+        message: `Successfully processed ${assignments.length} bulk assignments`,
+        results,
+        total_animals_assigned: allAnimalIds.length
+      });
+
+    } catch (error) {
+      await db.query('ROLLBACK');
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('Error in bulk assignment:', error);
+    res.status(500).json({
+      message: 'Failed to process bulk assignments',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/animal-requests/auto-fulfill
+ * Automatically fulfill requests where exact matches are available (facility managers only)
+ */
+router.post('/auto-fulfill', auth, roleCheck(['facility_manager', 'admin']), async (req, res) => {
+  try {
+    const { max_requests = 10, priority_only = false } = req.body;
+
+    // Get pending requests that could be auto-fulfilled
+    let requestFilter = `WHERE ar.status IN ('submitted', 'reviewing') AND ar.quantity_allocated < ar.quantity_requested`;
+
+    if (priority_only) {
+      requestFilter += ` AND ar.priority IN ('urgent', 'high')`;
+    }
+
+    const pendingRequestsQuery = `
+      SELECT ar.* FROM animal_requests ar
+      ${requestFilter}
+      ORDER BY
+        CASE ar.priority
+          WHEN 'urgent' THEN 1
+          WHEN 'high' THEN 2
+          WHEN 'normal' THEN 3
+          WHEN 'low' THEN 4
+        END,
+        ar.needed_by_date,
+        ar.created_at
+      LIMIT $1
+    `;
+
+    const pendingRequests = await db.query(pendingRequestsQuery, [max_requests]);
+    const results = [];
+
+    // Start transaction
+    await db.query('BEGIN');
+
+    try {
+      for (const request of pendingRequests.rows) {
+        const remainingQuantity = request.quantity_requested - (request.quantity_allocated || 0);
+
+        // Find exact matches for this request
+        let whereClause = `WHERE a.availability_status = 'available' AND a.status = 'active'`;
+        const values = [request.species, request.strain];
+        let paramCount = 2;
+
+        whereClause += ` AND a.species = $1 AND a.strain = $2`;
+
+        if (request.sex && request.sex !== 'any') {
+          paramCount++;
+          whereClause += ` AND a.sex = $${paramCount}`;
+          values.push(request.sex);
+        }
+
+        if (request.genotype) {
+          paramCount++;
+          whereClause += ` AND a.genotype = $${paramCount}`;
+          values.push(request.genotype);
+        }
+
+        // Age filtering
+        if (request.min_age_days) {
+          paramCount++;
+          whereClause += ` AND (CURRENT_DATE - a.birth_date) >= $${paramCount}`;
+          values.push(request.min_age_days);
+        }
+
+        if (request.max_age_days) {
+          paramCount++;
+          whereClause += ` AND (CURRENT_DATE - a.birth_date) <= $${paramCount}`;
+          values.push(request.max_age_days);
+        }
+
+        const availableQuery = `
+          SELECT id FROM animals a
+          ${whereClause}
+          ORDER BY a.animal_number
+          LIMIT $${paramCount + 1}
+        `;
+
+        values.push(remainingQuantity);
+        const availableAnimals = await db.query(availableQuery, values);
+
+        if (availableAnimals.rows.length >= remainingQuantity) {
+          // We can fulfill this request!
+          const animalIds = availableAnimals.rows.slice(0, remainingQuantity).map(a => a.id);
+
+          // Update animal availability
+          await db.query(
+            'UPDATE animals SET availability_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($2)',
+            ['claimed', animalIds]
+          );
+
+          // Create allocations
+          const allocationValues = animalIds.map((animalId, index) =>
+            `($1, $${index + 2}, $${animalIds.length + 2})`
+          ).join(', ');
+
+          const insertAllocationsQuery = `
+            INSERT INTO animal_request_allocations (request_id, animal_id, allocated_by)
+            VALUES ${allocationValues}
+            RETURNING *
+          `;
+
+          const allocationParams = [request.id, ...animalIds, req.user.id];
+          await db.query(insertAllocationsQuery, allocationParams);
+
+          // Update request status to fulfilled
+          await db.query(
+            'UPDATE animal_requests SET status = $1, fully_fulfilled_at = CURRENT_TIMESTAMP WHERE id = $2',
+            ['fulfilled', request.id]
+          );
+
+          results.push({
+            request_id: request.id,
+            request_number: request.request_number,
+            animals_assigned: animalIds.length,
+            status: 'fulfilled'
+          });
+        }
+      }
+
+      // Commit transaction
+      await db.query('COMMIT');
+
+      res.json({
+        message: `Auto-fulfilled ${results.length} requests`,
+        fulfilled_requests: results,
+        total_animals_assigned: results.reduce((sum, r) => sum + r.animals_assigned, 0)
+      });
+
+    } catch (error) {
+      await db.query('ROLLBACK');
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('Error in auto-fulfill:', error);
+    res.status(500).json({
+      message: 'Failed to auto-fulfill requests',
       error: error.message
     });
   }

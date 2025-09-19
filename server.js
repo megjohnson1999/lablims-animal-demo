@@ -402,6 +402,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/animals', require('./routes/animals'));
 app.use('/api/animal-claims', require('./routes/animalClaims'));
 app.use('/api/animal-requests', require('./routes/animalRequests'));
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/measurements', require('./routes/measurements'));
 app.use('/api/housing', require('./routes/housing'));
 app.use('/api/studies', require('./routes/experimentalStudies')); // Unified studies (was experimental-studies)

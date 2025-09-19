@@ -13,22 +13,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert,
   CircularProgress,
   Paper,
   IconButton,
-  Tooltip,
   Badge,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Checkbox,
-  FormControlLabel,
-  Fab,
   useTheme,
   useMediaQuery
 } from '@mui/material';
@@ -47,30 +38,18 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { canEditLabData } from '../../utils/roleUtils';
-import { animalAPI } from '../../services/api';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { formatDate } from '../../utils/helpers';
 
 const AvailableAnimalsList = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const canClaim = canEditLabData(currentUser); // researchers and above can claim
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // State management
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [claiming, setClaiming] = useState(null); // ID of animal being claimed
-  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
-  const [selectedAnimal, setSelectedAnimal] = useState(null);
-
-  // Multi-select claiming state
-  const [selectedAnimals, setSelectedAnimals] = useState([]);
-  const [bulkClaimDialogOpen, setBulkClaimDialogOpen] = useState(false);
-  const [bulkClaiming, setBulkClaiming] = useState(false);
   
   // Filters and search
   const [search, setSearch] = useState('');
@@ -83,12 +62,6 @@ const AvailableAnimalsList = () => {
   });
   const [showFilters, setShowFilters] = useState(false);
   
-  // Claim form data
-  const [claimData, setClaimData] = useState({
-    justification: '',
-    study_id: '',
-    approved_until: ''
-  });
 
   // Statistics
   const [stats, setStats] = useState({});
@@ -105,15 +78,12 @@ const AvailableAnimalsList = () => {
   const loadAvailableAnimals = async () => {
     try {
       setLoading(true);
-      console.log('Loading available animals...');
-      console.log('Current user:', currentUser);
-      console.log('Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
       
       const params = {
         search,
         ...filters,
         sort: 'species,strain,animal_number',
-        limit: 100 // Show more animals for claiming interface
+        limit: 100
       };
 
       // Remove 'all' values and empty strings
@@ -123,19 +93,11 @@ const AvailableAnimalsList = () => {
         }
       });
 
-      console.log('Request params:', params);
       const response = await axios.get('/api/animal-claims/available', { params });
-      console.log('Available animals response:', response);
       
       setAnimals(response.data.animals || []);
     } catch (err) {
       console.error('Error loading available animals:', err);
-      console.error('Error details:', {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        message: err.message
-      });
       toast.error(`Failed to load available animals: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
@@ -144,117 +106,13 @@ const AvailableAnimalsList = () => {
 
   const loadStats = async () => {
     try {
-      console.log('Loading stats...');
       const response = await axios.get('/api/animal-claims/stats');
-      console.log('Stats response:', response);
       setStats(response.data || {});
     } catch (err) {
       console.error('Error loading stats:', err);
-      console.error('Stats error details:', {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        message: err.message
-      });
     }
   };
 
-  const handleClaimAnimal = (animal) => {
-    setSelectedAnimal(animal);
-    setClaimData({
-      justification: '',
-      study_id: '',
-      approved_until: ''
-    });
-    setClaimDialogOpen(true);
-  };
-
-  const submitClaim = async () => {
-    if (!claimData.justification.trim()) {
-      toast.error('Please provide justification for claiming this animal');
-      return;
-    }
-
-    try {
-      setClaiming(selectedAnimal.id);
-
-      const claimRequest = {
-        animal_id: selectedAnimal.id,
-        justification: claimData.justification,
-        study_id: claimData.study_id || null,
-        approved_until: claimData.approved_until || null
-      };
-
-      const response = await axios.post('/api/animal-claims/claim', claimRequest);
-
-      toast.success(response.data.message || `Successfully claimed ${selectedAnimal.species} #${selectedAnimal.animal_number}!`);
-      setClaimDialogOpen(false);
-      loadAvailableAnimals(); // Refresh the list
-
-    } catch (error) {
-      console.error('Error claiming animal:', error);
-      toast.error('Failed to claim animal: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setClaiming(null);
-    }
-  };
-
-  // Multi-select functions
-  const toggleAnimalSelection = (animal) => {
-    const isSelected = selectedAnimals.some(a => a.id === animal.id);
-    if (isSelected) {
-      setSelectedAnimals(selectedAnimals.filter(a => a.id !== animal.id));
-    } else {
-      setSelectedAnimals([...selectedAnimals, animal]);
-    }
-  };
-
-  const selectAllAnimals = () => {
-    setSelectedAnimals([...animals]);
-  };
-
-  const clearSelection = () => {
-    setSelectedAnimals([]);
-  };
-
-  const handleBulkClaim = () => {
-    if (selectedAnimals.length === 0) {
-      toast.error('Please select at least one animal to claim');
-      return;
-    }
-    setBulkClaimDialogOpen(true);
-  };
-
-  const submitBulkClaim = async () => {
-    if (!claimData.justification.trim()) {
-      toast.error('Please provide justification for claiming these animals');
-      return;
-    }
-
-    try {
-      setBulkClaiming(true);
-
-      const bulkClaimRequest = {
-        animal_ids: selectedAnimals.map(a => a.id),
-        justification: claimData.justification,
-        study_id: claimData.study_id || null,
-        approved_until: claimData.approved_until || null
-      };
-
-      const response = await axios.post('/api/animal-claims/bulk-claim', bulkClaimRequest);
-
-      toast.success(response.data.message || `Successfully claimed ${selectedAnimals.length} animals!`);
-      setBulkClaimDialogOpen(false);
-      setSelectedAnimals([]);
-      loadAvailableAnimals(); // Refresh the list
-
-    } catch (error) {
-      console.error('Error bulk claiming animals:', error);
-      toast.error('Failed to claim animals: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setBulkClaiming(false);
-    }
-  };
 
   const getAgeDisplay = (birthDate) => {
     if (!birthDate) return 'Unknown';
@@ -312,7 +170,7 @@ const AvailableAnimalsList = () => {
             Available Animals
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Browse and claim animals for your research studies
+            Browse available animals - use animal requests to request assignments
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -325,15 +183,20 @@ const AvailableAnimalsList = () => {
           >
             Refresh
           </Button>
-          {canClaim && (
-            <Button
-              variant="text"
-              onClick={() => navigate('/animals')}
-              size={isMobile ? 'small' : 'medium'}
-            >
-              All Animals
-            </Button>
-          )}
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/animal-requests')}
+            size={isMobile ? 'small' : 'medium'}
+          >
+            Request Animals
+          </Button>
+          <Button
+            variant="text"
+            onClick={() => navigate('/animals')}
+            size={isMobile ? 'small' : 'medium'}
+          >
+            All Animals
+          </Button>
         </Box>
       </Box>
 
@@ -475,49 +338,6 @@ const AvailableAnimalsList = () => {
         </Accordion>
       </Paper>
 
-      {/* Bulk Selection Controls */}
-      {animals.length > 0 && canClaim && (
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={selectedAnimals.length === animals.length && animals.length > 0}
-                    indeterminate={selectedAnimals.length > 0 && selectedAnimals.length < animals.length}
-                    onChange={(e) => e.target.checked ? selectAllAnimals() : clearSelection()}
-                  />
-                }
-                label={`Select All (${animals.length})`}
-              />
-              {selectedAnimals.length > 0 && (
-                <>
-                  <Chip
-                    label={`${selectedAnimals.length} selected`}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Button size="small" onClick={clearSelection}>
-                    Clear Selection
-                  </Button>
-                </>
-              )}
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {selectedAnimals.length > 0 && (
-                <Button
-                  variant="contained"
-                  onClick={handleBulkClaim}
-                  disabled={bulkClaiming}
-                  size={isMobile ? 'small' : 'medium'}
-                >
-                  Claim {selectedAnimals.length} Animals
-                </Button>
-              )}
-            </Box>
-          </Box>
-        </Paper>
-      )}
 
       {/* Animals Grid */}
       {loading ? (
@@ -552,28 +372,13 @@ const AvailableAnimalsList = () => {
                       flexDirection: 'column',
                       '&:hover': {
                         boxShadow: 4
-                      },
-                      position: 'relative',
-                      border: selectedAnimals.some(a => a.id === animal.id) ? 2 : 1,
-                      borderColor: selectedAnimals.some(a => a.id === animal.id) ? 'primary.main' : 'divider'
+                      }
                     }}
                   >
-                    {/* Selection Checkbox */}
-                    {canClaim && (
-                      <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
-                        <Checkbox
-                          checked={selectedAnimals.some(a => a.id === animal.id)}
-                          onChange={() => toggleAnimalSelection(animal)}
-                          onClick={(e) => e.stopPropagation()}
-                          color="primary"
-                          size="small"
-                        />
-                      </Box>
-                    )}
 
                     <CardContent sx={{ flexGrow: 1, pb: 1 }}>
                       {/* Animal Number & Status */}
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, pr: canClaim ? 5 : 0 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography variant="h6" component="div">
                           #{animal.animal_number}
                         </Typography>
@@ -657,17 +462,6 @@ const AvailableAnimalsList = () => {
                       >
                         View Details
                       </Button>
-                      {canClaim && (
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={() => handleClaimAnimal(animal)}
-                          disabled={claiming === animal.id}
-                          sx={{ ml: 'auto' }}
-                        >
-                          {claiming === animal.id ? <CircularProgress size={16} /> : 'Claim'}
-                        </Button>
-                      )}
                     </CardActions>
                   </Card>
                 </Grid>
@@ -677,170 +471,6 @@ const AvailableAnimalsList = () => {
         </>
       )}
 
-      {/* Claim Animal Dialog */}
-      <Dialog 
-        open={claimDialogOpen} 
-        onClose={() => setClaimDialogOpen(false)}
-        maxWidth="sm" 
-        fullWidth
-        fullScreen={isMobile}
-      >
-        <DialogTitle>
-          Claim Animal #{selectedAnimal?.animal_number}
-        </DialogTitle>
-        <DialogContent>
-          {selectedAnimal && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="body2" color="text.secondary">
-                <strong>Species:</strong> {selectedAnimal.species} ({selectedAnimal.strain})
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                <strong>Sex:</strong> {selectedAnimal.sex === 'M' ? 'Male' : selectedAnimal.sex === 'F' ? 'Female' : 'Unknown'}
-              </Typography>
-              {selectedAnimal.genotype && (
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Genotype:</strong> {selectedAnimal.genotype}
-                </Typography>
-              )}
-            </Box>
-          )}
-          
-          <Alert severity="info" sx={{ mb: 3 }}>
-            <strong>Note:</strong> This is a simplified claiming process. 
-            In the full system, claims will require facility manager approval.
-          </Alert>
-
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="Justification *"
-            placeholder="Explain why you need this animal for your research..."
-            value={claimData.justification}
-            onChange={(e) => setClaimData({...claimData, justification: e.target.value})}
-            sx={{ mb: 2 }}
-            required
-            helperText="Required: Describe the purpose and necessity for claiming this animal"
-          />
-
-          <TextField
-            fullWidth
-            label="Study ID (Optional)"
-            placeholder="Enter study or protocol ID"
-            value={claimData.study_id}
-            onChange={(e) => setClaimData({...claimData, study_id: e.target.value})}
-            sx={{ mb: 2 }}
-          />
-
-          <TextField
-            fullWidth
-            type="date"
-            label="Expected Release Date (Optional)"
-            value={claimData.approved_until}
-            onChange={(e) => setClaimData({...claimData, approved_until: e.target.value})}
-            InputLabelProps={{ shrink: true }}
-            helperText="Optional: When do you expect to release this animal?"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setClaimDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={submitClaim}
-            variant="contained"
-            disabled={!claimData.justification.trim() || claiming}
-          >
-            {claiming ? <CircularProgress size={20} /> : 'Claim Animal'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Bulk Claim Dialog */}
-      <Dialog
-        open={bulkClaimDialogOpen}
-        onClose={() => setBulkClaimDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-        fullScreen={isMobile}
-      >
-        <DialogTitle>
-          Claim {selectedAnimals.length} Animals
-        </DialogTitle>
-        <DialogContent>
-          {/* Animals Summary */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Selected Animals:
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-              {selectedAnimals.slice(0, 10).map((animal) => (
-                <Chip
-                  key={animal.id}
-                  label={`#${animal.animal_number} (${animal.strain || animal.species})`}
-                  size="small"
-                  variant="outlined"
-                />
-              ))}
-              {selectedAnimals.length > 10 && (
-                <Chip
-                  label={`+${selectedAnimals.length - 10} more`}
-                  size="small"
-                  color="primary"
-                />
-              )}
-            </Box>
-          </Box>
-
-          <Alert severity="info" sx={{ mb: 3 }}>
-            <strong>Bulk Claiming:</strong> This will claim all selected animals with the same justification and study information.
-          </Alert>
-
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="Justification *"
-            placeholder="Explain why you need these animals for your research..."
-            value={claimData.justification}
-            onChange={(e) => setClaimData({...claimData, justification: e.target.value})}
-            sx={{ mb: 2 }}
-            required
-            helperText="Required: Describe the purpose and necessity for claiming these animals"
-          />
-
-          <TextField
-            fullWidth
-            label="Study ID (Optional)"
-            placeholder="Enter study or protocol ID"
-            value={claimData.study_id}
-            onChange={(e) => setClaimData({...claimData, study_id: e.target.value})}
-            sx={{ mb: 2 }}
-          />
-
-          <TextField
-            fullWidth
-            type="date"
-            label="Expected Release Date (Optional)"
-            value={claimData.approved_until}
-            onChange={(e) => setClaimData({...claimData, approved_until: e.target.value})}
-            InputLabelProps={{ shrink: true }}
-            helperText="Optional: When do you expect to release these animals?"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkClaimDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={submitBulkClaim}
-            variant="contained"
-            disabled={!claimData.justification.trim() || bulkClaiming}
-          >
-            {bulkClaiming ? <CircularProgress size={20} /> : `Claim ${selectedAnimals.length} Animals`}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

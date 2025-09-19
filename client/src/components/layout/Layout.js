@@ -46,6 +46,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import { useKeyboardShortcutsHelp } from '../common/KeyboardShortcutsHelp';
+import NotificationBell from '../notifications/NotificationBell';
 
 const drawerWidth = 240;
 
@@ -86,15 +87,19 @@ const Layout = () => {
     showHelp();
   };
 
-  // Check if user can manage users
+  // Check user permissions
   const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'facility_manager';
+  const isFacilityManager = currentUser?.role === 'admin' || currentUser?.role === 'facility_manager';
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
-    { text: 'Find Animals', icon: <SearchIcon />, path: '/animals/find' },
+    { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
     { text: 'Bulk Measurements', icon: <AssignmentIcon />, path: '/bulk-measurements' },
     { text: 'Animal Requests', icon: <RequestIcon />, path: '/animal-requests' },
+    ...(isFacilityManager ? [
+      { text: 'Facility Manager', icon: <AdminIcon />, path: '/facility-manager' }
+    ] : []),
     { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
     { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
     { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
@@ -103,7 +108,7 @@ const Layout = () => {
     { text: 'Inventory', icon: <InventoryIcon />, path: '/inventory' },
     { text: 'Labels', icon: <LabelIcon />, path: '/labels' },
     ...(canManageUsers ? [
-      { text: 'User Management', icon: <AdminIcon />, path: '/admin/users' }
+      { text: 'User Management', icon: <PeopleIcon />, path: '/admin/users' }
     ] : [])
   ];
 
@@ -160,6 +165,7 @@ const Layout = () => {
             <Typography variant="body2" sx={{ mr: 2 }}>
               {currentUser?.username}
             </Typography>
+            <NotificationBell />
             <IconButton
               size="large"
               edge="end"

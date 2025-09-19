@@ -24,6 +24,13 @@ CREATE TABLE IF NOT EXISTS users (
   locked_until TIMESTAMP NULL,
   last_login TIMESTAMP NULL,
   password_changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  notification_preferences JSONB DEFAULT '{
+    "email_notifications": true,
+    "browser_notifications": true,
+    "request_status_changes": true,
+    "animal_assignments": true,
+    "system_announcements": true
+  }'::jsonb,
   created_by UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -1737,14 +1744,18 @@ CREATE TABLE IF NOT EXISTS animal_request_status_history (
 );
 
 -- Notifications/alerts for request updates
-CREATE TABLE IF NOT EXISTS animal_request_notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  request_id UUID NOT NULL REFERENCES animal_requests(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  notification_type VARCHAR(50) NOT NULL, -- 'availability', 'partial_fulfillment', 'status_change', etc.
-  message TEXT NOT NULL,
-  read_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Modern comprehensive notifications system
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error')),
+    related_request_id UUID REFERENCES animal_requests(id) ON DELETE CASCADE,
+    action_url VARCHAR(500),
+    read_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- ================================================================================
@@ -1889,8 +1900,12 @@ CREATE INDEX IF NOT EXISTS idx_animal_request_allocations_request_id ON animal_r
 CREATE INDEX IF NOT EXISTS idx_animal_request_allocations_animal_id ON animal_request_allocations(animal_id);
 CREATE INDEX IF NOT EXISTS idx_animal_request_allocations_status ON animal_request_allocations(status);
 
-CREATE INDEX IF NOT EXISTS idx_animal_request_notifications_user_id ON animal_request_notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_animal_request_notifications_read_at ON animal_request_notifications(read_at);
+-- Notification indexes for performance
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read_at ON notifications(read_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_related_request ON notifications(related_request_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread_user ON notifications(user_id, read_at) WHERE read_at IS NULL;
 
 -- ================================================================================
 -- SAMPLE DATA FOR TESTING

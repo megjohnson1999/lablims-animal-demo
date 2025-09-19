@@ -36,12 +36,15 @@ import BiologicalSampleDetail from './components/biologicalSamples/BiologicalSam
 import AnimalList from './components/animals/AnimalList';
 import AnimalForm from './components/animals/AnimalForm';
 import AnimalDetail from './components/animals/AnimalDetail';
-import UnifiedAnimalInterface from './components/animals/UnifiedAnimalInterface';
+import AvailableAnimalsList from './components/animals/AvailableAnimalsList';
 import AnimalRequestForm from './components/animals/AnimalRequestForm';
 import BulkMeasurementEntry from './components/measurements/BulkMeasurementEntry';
 
 // Animal Request Pages
 import AnimalRequests from './pages/AnimalRequests';
+
+// Facility Manager Components
+import FacilityManagerDashboard from './components/facility/FacilityManagerDashboard';
 
 // Housing Components
 import HousingDashboard from './components/housing/HousingDashboard';
@@ -212,7 +215,7 @@ function App() {
           {/* Animal Routes */}
           <Route path="animals">
             <Route index element={<AnimalList />} />
-            <Route path="find" element={<UnifiedAnimalInterface />} />
+            <Route path="available" element={<AvailableAnimalsList />} />
             <Route path="new" element={<AnimalForm />} />
             <Route path=":id" element={<AnimalDetail />} />
             <Route path=":id/edit" element={<AnimalForm />} />
@@ -223,6 +226,9 @@ function App() {
             <Route index element={<AnimalRequests />} />
             <Route path="new" element={<AnimalRequestForm />} />
           </Route>
+
+          {/* Facility Manager Routes */}
+          <Route path="facility-manager" element={<FacilityManagerDashboard />} />
           {/* Bulk Measurement Entry */}
           <Route path="bulk-measurements" element={<BulkMeasurementEntry />} />
           
