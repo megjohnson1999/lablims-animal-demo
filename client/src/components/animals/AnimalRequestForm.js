@@ -401,6 +401,36 @@ const AnimalRequestForm = () => {
               </Grid>
 
               <Grid item xs={12}>
+                {/* Quick strain preset buttons */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                    Quick Strain Combinations:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleInputChange('strain_alternatives', ['C57BL/6NJ', 'BALB/cJ'])}
+                    >
+                      Common Lab Strains
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleInputChange('strain_alternatives', ['C57BL/6J', 'C57BL/6NJ'])}
+                    >
+                      C57BL/6 Variants
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleInputChange('strain_alternatives', ['DBA/2J', 'CBA/J', 'C3H/HeJ'])}
+                    >
+                      Classical Inbreds
+                    </Button>
+                  </Box>
+                </Box>
+
                 <Autocomplete
                   multiple
                   freeSolo
@@ -476,7 +506,44 @@ const AnimalRequestForm = () => {
         return (
           <Box sx={{ mt: 2 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
+                {/* Quick quantity presets */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                    Common Study Sizes:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleInputChange('quantity_requested', 10)}
+                    >
+                      Pilot Study (10)
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleInputChange('quantity_requested', 24)}
+                    >
+                      Standard Study (24)
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleInputChange('quantity_requested', 48)}
+                    >
+                      Large Study (48)
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleInputChange('quantity_requested', 96)}
+                    >
+                      Multi-Group (96)
+                    </Button>
+                  </Box>
+                </Box>
+
                 <TextField
                   fullWidth
                   type="number"
@@ -498,6 +565,57 @@ const AnimalRequestForm = () => {
                   placeholder="30"
                   helperText="How long will you use these animals?"
                 />
+              </Grid>
+
+              <Grid item xs={12}>
+                {/* Quick age range presets */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                    Common Age Ranges:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        handleInputChange('min_age_days', '21');
+                        handleInputChange('max_age_days', '35');
+                      }}
+                    >
+                      Young (3-5 weeks)
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        handleInputChange('min_age_days', '56');
+                        handleInputChange('max_age_days', '84');
+                      }}
+                    >
+                      Adult (8-12 weeks)
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        handleInputChange('min_age_days', '84');
+                        handleInputChange('max_age_days', '120');
+                      }}
+                    >
+                      Mature (12-17 weeks)
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        handleInputChange('min_age_days', '');
+                        handleInputChange('max_age_days', '');
+                      }}
+                    >
+                      Any Age
+                    </Button>
+                  </Box>
+                </Box>
               </Grid>
 
               <Grid item xs={12} sm={6}>
