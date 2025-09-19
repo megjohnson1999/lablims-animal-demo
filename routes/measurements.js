@@ -487,4 +487,139 @@ router.get('/schedules/overdue', auth, async (req, res) => {
   }
 });
 
+// ================================================================================
+// MEASUREMENT SESSIONS & HISTORY ROUTES
+// ================================================================================
+
+// Get recent measurement sessions for a study
+router.get('/sessions/:studyId', auth, async (req, res) => {
+  try {
+    const { studyId } = req.params;
+    const { limit = 10 } = req.query;
+
+    const query = `
+      SELECT
+        measurement_date,
+        COUNT(DISTINCT animal_id) as animal_count,
+        ARRAY_AGG(DISTINCT measurement_type) as measurement_types,
+        STRING_AGG(DISTINCT u.first_name || ' ' || u.last_name, ', ') as measurers,
+        COUNT(*) as total_measurements
+      FROM animal_measurements am
+      LEFT JOIN users u ON am.measured_by = u.id
+      WHERE am.study_id = $1
+        AND am.measurement_date >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY measurement_date
+      ORDER BY measurement_date DESC
+      LIMIT $2
+    `;
+
+    const result = await pool.query(query, [studyId, parseInt(limit)]);
+
+    res.json({ sessions: result.rows });
+
+  } catch (error) {
+    console.error('Error fetching measurement sessions:', error);
+    res.status(500).json({ message: 'Failed to fetch measurement sessions' });
+  }
+});
+
+// Get animals from a previous measurement session
+router.get('/sessions/:studyId/:date/animals', auth, async (req, res) => {
+  try {
+    const { studyId, date } = req.params;
+
+    const query = `
+      SELECT DISTINCT
+        a.id,
+        a.animal_number,
+        a.species,
+        a.strain,
+        a.genotype,
+        a.sex,
+        a.birth_date,
+        ARRAY_AGG(DISTINCT am.measurement_type) as last_measurement_types,
+        MAX(am.measurement_date) as last_measurement_date
+      FROM animals a
+      JOIN animal_measurements am ON a.id = am.animal_id
+      WHERE am.study_id = $1
+        AND am.measurement_date = $2
+      GROUP BY a.id, a.animal_number, a.species, a.strain, a.genotype, a.sex, a.birth_date
+      ORDER BY a.animal_number
+    `;
+
+    const result = await pool.query(query, [studyId, date]);
+
+    res.json({ animals: result.rows });
+
+  } catch (error) {
+    console.error('Error fetching session animals:', error);
+    res.status(500).json({ message: 'Failed to fetch session animals' });
+  }
+});
+
+// Get animals with recent measurements for a study
+router.get('/study/:studyId/animals-with-history', auth, async (req, res) => {
+  try {
+    const { studyId } = req.params;
+
+    const query = `
+      SELECT DISTINCT
+        a.id,
+        a.animal_number,
+        a.species,
+        a.strain,
+        a.genotype,
+        a.sex,
+        a.birth_date,
+        recent_measurements.last_measurement_date,
+        recent_measurements.days_since_measurement,
+        recent_measurements.recent_measurement_types,
+        recent_measurements.measurement_count,
+        CASE
+          WHEN recent_measurements.days_since_measurement <= 1 THEN 'recent'
+          WHEN recent_measurements.days_since_measurement <= 7 THEN 'week'
+          ELSE 'old'
+        END as measurement_recency
+      FROM animals a
+      JOIN study_assignments sa ON a.id = sa.animal_id
+      LEFT JOIN (
+        SELECT
+          am.animal_id,
+          MAX(am.measurement_date) as last_measurement_date,
+          CURRENT_DATE - MAX(am.measurement_date) as days_since_measurement,
+          ARRAY_AGG(DISTINCT am.measurement_type) as recent_measurement_types,
+          COUNT(*) as measurement_count
+        FROM animal_measurements am
+        WHERE am.study_id = $1
+          AND am.measurement_date >= CURRENT_DATE - INTERVAL '30 days'
+        GROUP BY am.animal_id
+      ) recent_measurements ON a.id = recent_measurements.animal_id
+      WHERE sa.study_id = $1
+        AND sa.status = 'active'
+      ORDER BY
+        recent_measurements.last_measurement_date DESC NULLS LAST,
+        a.animal_number
+    `;
+
+    const result = await pool.query(query, [studyId]);
+
+    // Group animals by recency
+    const grouped = {
+      recent: result.rows.filter(a => a.measurement_recency === 'recent'),
+      week: result.rows.filter(a => a.measurement_recency === 'week'),
+      unmeasured: result.rows.filter(a => !a.last_measurement_date),
+      old: result.rows.filter(a => a.measurement_recency === 'old')
+    };
+
+    res.json({
+      animals: result.rows,
+      grouped
+    });
+
+  } catch (error) {
+    console.error('Error fetching animals with history:', error);
+    res.status(500).json({ message: 'Failed to fetch animals with measurement history' });
+  }
+});
+
 module.exports = router;

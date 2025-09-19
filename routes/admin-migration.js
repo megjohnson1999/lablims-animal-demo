@@ -156,4 +156,97 @@ router.get('/check-time-series-tables', auth, roleCheck(['admin']), async (req, 
   }
 });
 
+/**
+ * POST /api/admin/apply-measurement-session-migration
+ * Apply the measurement session support migration (admin only)
+ */
+router.post('/apply-measurement-session-migration', auth, roleCheck(['admin']), async (req, res) => {
+  try {
+    console.log('Starting measurement session support migration...');
+
+    // Read the migration SQL file
+    const migrationPath = path.join(__dirname, '..', 'db', 'migrations', '002_add_measurement_session_support.sql');
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+
+    // Execute the migration
+    await db.query(migrationSQL);
+
+    console.log('Measurement session support migration completed successfully');
+
+    res.json({
+      success: true,
+      message: 'Measurement session support migration applied successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Measurement session migration failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Measurement session migration failed',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/check-measurement-session-support
+ * Check if measurement session support is available (admin only)
+ */
+router.get('/check-measurement-session-support', auth, roleCheck(['admin']), async (req, res) => {
+  try {
+    // Check if the required views exist
+    const views = ['recent_measurement_sessions', 'animals_with_measurement_context'];
+    const results = {};
+
+    for (const viewName of views) {
+      const result = await db.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.views
+          WHERE table_schema = 'public'
+          AND table_name = $1
+        );
+      `, [viewName]);
+      results[viewName] = result.rows[0].exists;
+    }
+
+    // Check if specific indexes exist
+    const indexes = [
+      'idx_animal_measurements_study_date',
+      'idx_animal_measurements_study_animal_date',
+      'idx_animal_measurements_recent'
+    ];
+
+    for (const indexName of indexes) {
+      const result = await db.query(`
+        SELECT EXISTS (
+          SELECT FROM pg_indexes
+          WHERE schemaname = 'public'
+          AND indexname = $1
+        );
+      `, [indexName]);
+      results[`${indexName}_exists`] = result.rows[0].exists;
+    }
+
+    const allViewsExist = views.every(view => results[view]);
+    const allIndexesExist = indexes.every(index => results[`${index}_exists`]);
+
+    res.json({
+      views: results,
+      allViewsExist,
+      allIndexesExist,
+      sessionSupportReady: allViewsExist && allIndexesExist,
+      message: (allViewsExist && allIndexesExist) ?
+        'Measurement session support is ready' :
+        'Measurement session support migration needed'
+    });
+
+  } catch (error) {
+    console.error('Error checking measurement session support:', error);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

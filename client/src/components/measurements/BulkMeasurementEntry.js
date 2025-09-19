@@ -59,13 +59,17 @@ const BulkMeasurementEntry = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // State
+  const [step, setStep] = useState('study-selection'); // 'study-selection', 'animal-selection', 'measurement-entry'
   const [measurementDate, setMeasurementDate] = useState(new Date());
   const [selectedStudy, setSelectedStudy] = useState('');
+  const [selectedStudyData, setSelectedStudyData] = useState(null);
   const [selectedMeasurementTypes, setSelectedMeasurementTypes] = useState(['weight', 'body_condition_score']);
+  const [selectedAnimals, setSelectedAnimals] = useState([]);
   const [animals, setAnimals] = useState([]);
   const [studies, setStudies] = useState([]);
   const [measurementTypes, setMeasurementTypes] = useState([]);
   const [measurements, setMeasurements] = useState([]);
+  const [recentSessions, setRecentSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -77,37 +81,38 @@ const BulkMeasurementEntry = () => {
 
   // Search and filters
   const [animalSearch, setAnimalSearch] = useState('');
-  const [filteredAnimals, setFilteredAnimals] = useState([]);
+  const [animalSelection, setAnimalSelection] = useState('recent'); // 'recent', 'all', 'custom'
 
   useEffect(() => {
     loadInitialData();
   }, []);
 
   useEffect(() => {
-    filterAnimals();
-  }, [animals, animalSearch, selectedStudy]);
+    if (selectedStudy && step === 'animal-selection') {
+      loadStudyData();
+    }
+  }, [selectedStudy, step]);
 
   useEffect(() => {
-    initializeMeasurements();
-  }, [filteredAnimals, selectedMeasurementTypes]);
+    if (selectedAnimals.length > 0 && step === 'measurement-entry') {
+      initializeMeasurements();
+    }
+  }, [selectedAnimals, selectedMeasurementTypes, step]);
 
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const [animalsRes, studiesRes, typesRes] = await Promise.all([
-        axios.get('/api/animals?limit=500'), // Get more animals for selection
+      const [studiesRes, typesRes] = await Promise.all([
         axios.get('/api/studies'),
         axios.get('/api/measurements/types')
       ]);
 
-      setAnimals(animalsRes.data.animals || []);
       setStudies(studiesRes.data.studies || []);
       setMeasurementTypes(typesRes.data.measurement_types || []);
 
     } catch (error) {
       console.error('Error loading data:', error);
       if (error.response?.status === 404 || error.message.includes('measurements')) {
-        // Measurement tables don't exist yet - migration not applied
         setLoading(false);
         return;
       }
@@ -117,43 +122,100 @@ const BulkMeasurementEntry = () => {
     }
   };
 
-  const filterAnimals = useCallback(() => {
-    let filtered = animals;
+  const loadStudyData = async () => {
+    try {
+      setLoading(true);
+      const [sessionsRes, animalsRes] = await Promise.all([
+        axios.get(`/api/measurements/sessions/${selectedStudy}`),
+        axios.get(`/api/measurements/study/${selectedStudy}/animals-with-history`)
+      ]);
 
-    // Filter by study if selected
-    if (selectedStudy) {
-      filtered = filtered.filter(animal =>
-        animal.study_assignments?.some(assignment => assignment.study_id === selectedStudy)
-      );
+      setRecentSessions(sessionsRes.data.sessions || []);
+      setAnimals(animalsRes.data.animals || []);
+
+      // Find the selected study details
+      const studyData = studies.find(s => s.id === selectedStudy);
+      setSelectedStudyData(studyData);
+
+    } catch (error) {
+      console.error('Error loading study data:', error);
+      toast.error('Failed to load study data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const continueFromSession = async (session) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/measurements/sessions/${selectedStudy}/${session.measurement_date}/animals`);
+      const sessionAnimals = response.data.animals || [];
+
+      setSelectedAnimals(sessionAnimals);
+      setSelectedMeasurementTypes(session.measurement_types || ['weight']);
+      setStep('measurement-entry');
+
+      toast.success(`Loaded ${sessionAnimals.length} animals from ${new Date(session.measurement_date).toLocaleDateString()}`);
+    } catch (error) {
+      console.error('Error loading session animals:', error);
+      toast.error('Failed to load session animals');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectStudy = (studyId) => {
+    setSelectedStudy(studyId);
+    setStep('animal-selection');
+  };
+
+  const selectAnimalsAndContinue = () => {
+    let animalsToSelect = [];
+
+    if (animalSelection === 'recent') {
+      animalsToSelect = animals.filter(a => a.measurement_recency === 'recent' || a.measurement_recency === 'week');
+    } else if (animalSelection === 'all') {
+      animalsToSelect = animals;
+    } else {
+      // Custom selection - use currently selected animals
+      animalsToSelect = selectedAnimals;
     }
 
-    // Filter by search term
     if (animalSearch) {
       const search = animalSearch.toLowerCase();
-      filtered = filtered.filter(animal =>
+      animalsToSelect = animalsToSelect.filter(animal =>
         animal.animal_number?.toString().includes(search) ||
         animal.strain?.toLowerCase().includes(search) ||
         animal.genotype?.toLowerCase().includes(search)
       );
     }
 
-    // Sort by animal number
-    filtered.sort((a, b) => {
-      const numA = parseInt(a.animal_number) || 0;
-      const numB = parseInt(b.animal_number) || 0;
-      return numA - numB;
-    });
+    setSelectedAnimals(animalsToSelect.slice(0, 50)); // Limit to 50 for performance
+    setStep('measurement-entry');
+  };
 
-    setFilteredAnimals(filtered.slice(0, 50)); // Limit to 50 animals for performance
-  }, [animals, animalSearch, selectedStudy]);
+  const goBackToStudySelection = () => {
+    setStep('study-selection');
+    setSelectedStudy('');
+    setSelectedStudyData(null);
+    setSelectedAnimals([]);
+    setRecentSessions([]);
+  };
+
+  const goBackToAnimalSelection = () => {
+    setStep('animal-selection');
+    setSelectedAnimals([]);
+  };
 
   const initializeMeasurements = useCallback(() => {
-    const newMeasurements = filteredAnimals.map(animal => {
+    const newMeasurements = selectedAnimals.map(animal => {
       const measurement = {
         animal_id: animal.id,
         animal_number: animal.animal_number,
         animal_strain: animal.strain,
         animal_sex: animal.sex,
+        last_measurement_date: animal.last_measurement_date,
+        days_since_measurement: animal.days_since_measurement,
         values: {},
         notes: ''
       };
@@ -168,7 +230,7 @@ const BulkMeasurementEntry = () => {
 
     setMeasurements(newMeasurements);
     setErrors({});
-  }, [filteredAnimals, selectedMeasurementTypes]);
+  }, [selectedAnimals, selectedMeasurementTypes]);
 
   const handleMeasurementChange = (animalIndex, measurementType, value) => {
     const newMeasurements = [...measurements];
@@ -318,13 +380,21 @@ const BulkMeasurementEntry = () => {
     }
   };
 
-  const addAllAnimalsFromStudy = () => {
-    if (!selectedStudy) {
-      toast.error('Please select a study first');
-      return;
+  const toggleAnimalSelection = (animal) => {
+    const isSelected = selectedAnimals.some(a => a.id === animal.id);
+    if (isSelected) {
+      setSelectedAnimals(selectedAnimals.filter(a => a.id !== animal.id));
+    } else {
+      setSelectedAnimals([...selectedAnimals, animal]);
     }
+  };
 
-    setAnimalSearch(''); // Clear search to show all animals from study
+  const selectAllAnimals = () => {
+    setSelectedAnimals(animals);
+  };
+
+  const clearAnimalSelection = () => {
+    setSelectedAnimals([]);
   };
 
   if (loading) {
@@ -357,22 +427,263 @@ const BulkMeasurementEntry = () => {
     );
   }
 
-  return (
+  // Study Selection Screen
+  const renderStudySelection = () => (
     <Box>
-      {/* Header */}
       <Typography variant="h4" gutterBottom>
-        Bulk Measurement Entry
+        Select Study for Measurement Entry
       </Typography>
       <Typography variant="body1" color="text.secondary" paragraph>
-        Enter measurements for multiple animals at once. Perfect for daily data collection from lab notebooks.
+        Choose the study you want to record measurements for. This will show you recent measurement sessions and available animals.
+      </Typography>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardHeader title="Available Studies" />
+            <CardContent>
+              {studies.length === 0 ? (
+                <Alert severity="info">No studies found. Please create a study first.</Alert>
+              ) : (
+                <Grid container spacing={2}>
+                  {studies.map((study) => (
+                    <Grid item xs={12} sm={6} md={4} key={study.id}>
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          cursor: 'pointer',
+                          '&:hover': { boxShadow: 3 },
+                          transition: 'box-shadow 0.2s'
+                        }}
+                        onClick={() => selectStudy(study.id)}
+                      >
+                        <CardContent>
+                          <Typography variant="h6" gutterBottom>
+                            {study.study_name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Protocol: {study.protocol_number || 'N/A'}
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            Principal Investigator: {study.principal_investigator || 'N/A'}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  // Animal Selection Screen
+  const renderAnimalSelection = () => (
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        Select Animals - {selectedStudyData?.study_name}
+      </Typography>
+      <Typography variant="body1" color="text.secondary" paragraph>
+        Choose which animals to measure. You can continue from a previous session or select animals manually.
+      </Typography>
+
+      {/* Recent Sessions */}
+      {recentSessions.length > 0 && (
+        <Card sx={{ mb: 3 }}>
+          <CardHeader title="Recent Measurement Sessions" />
+          <CardContent>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Continue from a previous measurement session:
+            </Typography>
+            <Grid container spacing={2}>
+              {recentSessions.map((session, index) => (
+                <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover': { boxShadow: 2 }
+                    }}
+                    onClick={() => continueFromSession(session)}
+                  >
+                    <CardContent>
+                      <Typography variant="h6">
+                        {new Date(session.measurement_date).toLocaleDateString()}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {session.animal_count} animals
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        Types: {session.measurement_types.join(', ')}
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        By: {session.measurers}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Animal Selection Options */}
+      <Card sx={{ mb: 3 }}>
+        <CardHeader title="Or Select Animals Manually" />
+        <CardContent>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Selection Type</InputLabel>
+                <Select
+                  value={animalSelection}
+                  onChange={(e) => setAnimalSelection(e.target.value)}
+                >
+                  <MenuItem value="recent">Recently Measured</MenuItem>
+                  <MenuItem value="all">All Study Animals</MenuItem>
+                  <MenuItem value="custom">Custom Selection</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                label="Search Animals"
+                value={animalSearch}
+                onChange={(e) => setAnimalSearch(e.target.value)}
+                placeholder="Animal #, strain..."
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button variant="outlined" onClick={selectAllAnimals}>
+                  Select All
+                </Button>
+                <Button variant="outlined" onClick={clearAnimalSelection}>
+                  Clear Selection
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={selectAnimalsAndContinue}
+                  disabled={selectedAnimals.length === 0}
+                >
+                  Continue with {selectedAnimals.length} Animals
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Animal List */}
+      {animals.length > 0 && (
+        <Card>
+          <CardHeader title={`Available Animals (${animals.length})`} />
+          <CardContent>
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell padding="checkbox">Select</TableCell>
+                    <TableCell>Animal #</TableCell>
+                    <TableCell>Strain</TableCell>
+                    <TableCell>Sex</TableCell>
+                    <TableCell>Last Measured</TableCell>
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {animals
+                    .filter(animal => {
+                      if (!animalSearch) return true;
+                      const search = animalSearch.toLowerCase();
+                      return animal.animal_number?.toString().includes(search) ||
+                             animal.strain?.toLowerCase().includes(search) ||
+                             animal.genotype?.toLowerCase().includes(search);
+                    })
+                    .map((animal) => {
+                      const isSelected = selectedAnimals.some(a => a.id === animal.id);
+                      return (
+                        <TableRow
+                          key={animal.id}
+                          hover
+                          selected={isSelected}
+                          onClick={() => animalSelection === 'custom' && toggleAnimalSelection(animal)}
+                          sx={{ cursor: animalSelection === 'custom' ? 'pointer' : 'default' }}
+                        >
+                          <TableCell padding="checkbox">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleAnimalSelection(animal)}
+                            />
+                          </TableCell>
+                          <TableCell>#{animal.animal_number}</TableCell>
+                          <TableCell>{animal.strain || '-'}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={animal.sex || '?'}
+                              size="small"
+                              color={animal.sex === 'M' ? 'primary' : 'secondary'}
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {animal.last_measurement_date ? (
+                              `${animal.days_since_measurement} days ago`
+                            ) : (
+                              'Never'
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={animal.measurement_recency === 'recent' ? 'Recent' :
+                                     animal.measurement_recency === 'week' ? 'This Week' :
+                                     animal.measurement_recency === 'old' ? 'Old' : 'Unmeasured'}
+                              size="small"
+                              color={animal.measurement_recency === 'recent' ? 'success' :
+                                     animal.measurement_recency === 'week' ? 'warning' : 'default'}
+                              variant="outlined"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      <Box sx={{ mt: 2 }}>
+        <Button onClick={goBackToStudySelection} startIcon={<ClearIcon />}>
+          Back to Study Selection
+        </Button>
+      </Box>
+    </Box>
+  );
+
+  // Measurement Entry Screen
+  const renderMeasurementEntry = () => (
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        Measurement Entry - {selectedStudyData?.study_name}
+      </Typography>
+      <Typography variant="body1" color="text.secondary" paragraph>
+        Recording measurements for {selectedAnimals.length} animals. Enter data and click Save when complete.
       </Typography>
 
       {/* Configuration */}
       <Card sx={{ mb: 3 }}>
-        <CardHeader title="Setup" />
+        <CardHeader title="Measurement Settings" />
         <CardContent>
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
                   label="Measurement Date *"
@@ -384,24 +695,7 @@ const BulkMeasurementEntry = () => {
               </LocalizationProvider>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Study (Optional)</InputLabel>
-                <Select
-                  value={selectedStudy}
-                  onChange={(e) => setSelectedStudy(e.target.value)}
-                >
-                  <MenuItem value="">All Animals</MenuItem>
-                  {studies.map((study) => (
-                    <MenuItem key={study.id} value={study.id}>
-                      {study.study_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={8}>
               <Autocomplete
                 multiple
                 options={measurementTypes.map(type => type.name)}
@@ -426,29 +720,7 @@ const BulkMeasurementEntry = () => {
                 }
               />
             </Grid>
-
-            <Grid item xs={12} sm={6} md={2}>
-              <TextField
-                fullWidth
-                label="Search Animals"
-                value={animalSearch}
-                onChange={(e) => setAnimalSearch(e.target.value)}
-                placeholder="Animal #, strain..."
-              />
-            </Grid>
           </Grid>
-
-          {selectedStudy && (
-            <Box sx={{ mt: 2 }}>
-              <Button
-                variant="outlined"
-                onClick={addAllAnimalsFromStudy}
-                startIcon={<RefreshIcon />}
-              >
-                Show All Animals from Selected Study
-              </Button>
-            </Box>
-          )}
         </CardContent>
       </Card>
 
@@ -473,10 +745,18 @@ const BulkMeasurementEntry = () => {
                 <Button
                   variant="outlined"
                   startIcon={<ClearIcon />}
+                  onClick={goBackToAnimalSelection}
+                  size="small"
+                >
+                  Change Animals
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<ClearIcon />}
                   onClick={clearAllData}
                   size="small"
                 >
-                  Clear All
+                  Clear Data
                 </Button>
                 <Button
                   variant="contained"
@@ -499,6 +779,7 @@ const BulkMeasurementEntry = () => {
                     </TableCell>
                     <TableCell sx={{ minWidth: 100 }}>Strain</TableCell>
                     <TableCell sx={{ minWidth: 60 }}>Sex</TableCell>
+                    <TableCell sx={{ minWidth: 100 }}>Last Measured</TableCell>
                     {selectedMeasurementTypes.map((type) => {
                       const typeInfo = getMeasurementTypeInfo(type);
                       return (
@@ -539,6 +820,15 @@ const BulkMeasurementEntry = () => {
                           color={measurement.animal_sex === 'M' ? 'primary' : 'secondary'}
                           variant="outlined"
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {measurement.last_measurement_date ? (
+                            `${measurement.days_since_measurement} days ago`
+                          ) : (
+                            'Never'
+                          )}
+                        </Typography>
                       </TableCell>
                       {selectedMeasurementTypes.map((type) => {
                         const errorKey = `${index}-${type}`;
@@ -590,12 +880,23 @@ const BulkMeasurementEntry = () => {
         </Card>
       ) : (
         <Alert severity="info">
-          {filteredAnimals.length === 0 ?
-            'No animals found. Try adjusting your search criteria or selecting a different study.' :
-            'Configure the measurement types above to begin data entry.'
-          }
+          Configure the measurement types above to begin data entry.
         </Alert>
       )}
+
+      <Box sx={{ mt: 2 }}>
+        <Button onClick={goBackToAnimalSelection} startIcon={<ClearIcon />}>
+          Back to Animal Selection
+        </Button>
+      </Box>
+    </Box>
+  );
+
+  return (
+    <Box>
+      {step === 'study-selection' && renderStudySelection()}
+      {step === 'animal-selection' && renderAnimalSelection()}
+      {step === 'measurement-entry' && renderMeasurementEntry()}
 
       {/* Confirm Save Dialog */}
       <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
