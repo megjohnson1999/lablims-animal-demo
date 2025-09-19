@@ -176,6 +176,14 @@ const BulkMeasurementEntry = () => {
       animalsToSelect = animals.filter(a => a.measurement_recency === 'recent' || a.measurement_recency === 'week');
     } else if (animalSelection === 'all') {
       animalsToSelect = animals;
+    } else if (animalSelection === 'unmeasured') {
+      animalsToSelect = animals.filter(a => a.measurement_recency === 'unmeasured');
+    } else if (animalSelection === 'by_strain') {
+      // Get unique strains and auto-select all animals from first strain
+      const strains = [...new Set(animals.map(a => a.strain).filter(Boolean))];
+      if (strains.length > 0) {
+        animalsToSelect = animals.filter(a => a.strain === strains[0]);
+      }
     } else {
       // Custom selection - use currently selected animals
       animalsToSelect = selectedAnimals;
@@ -193,6 +201,28 @@ const BulkMeasurementEntry = () => {
     setSelectedAnimals(animalsToSelect.slice(0, 50)); // Limit to 50 for performance
     setStep('measurement-entry');
   };
+
+  // Auto-select animals when selection type changes (except for custom)
+  useEffect(() => {
+    if (animalSelection !== 'custom' && animals.length > 0) {
+      let autoSelected = [];
+
+      if (animalSelection === 'recent') {
+        autoSelected = animals.filter(a => a.measurement_recency === 'recent' || a.measurement_recency === 'week');
+      } else if (animalSelection === 'all') {
+        autoSelected = animals;
+      } else if (animalSelection === 'unmeasured') {
+        autoSelected = animals.filter(a => a.measurement_recency === 'unmeasured');
+      } else if (animalSelection === 'by_strain') {
+        const strains = [...new Set(animals.map(a => a.strain).filter(Boolean))];
+        if (strains.length > 0) {
+          autoSelected = animals.filter(a => a.strain === strains[0]);
+        }
+      }
+
+      setSelectedAnimals(autoSelected.slice(0, 50));
+    }
+  }, [animalSelection, animals]);
 
   const goBackToStudySelection = () => {
     setStep('study-selection');
@@ -390,11 +420,21 @@ const BulkMeasurementEntry = () => {
   };
 
   const selectAllAnimals = () => {
-    setSelectedAnimals(animals);
+    setSelectedAnimals(animals.slice(0, 50));
   };
 
   const clearAnimalSelection = () => {
     setSelectedAnimals([]);
+  };
+
+  const selectByStrain = (strain) => {
+    const strainAnimals = animals.filter(a => a.strain === strain);
+    setSelectedAnimals(strainAnimals.slice(0, 50));
+  };
+
+  const selectByRecency = (recency) => {
+    const recencyAnimals = animals.filter(a => a.measurement_recency === recency);
+    setSelectedAnimals(recencyAnimals.slice(0, 50));
   };
 
   if (loading) {
@@ -533,7 +573,7 @@ const BulkMeasurementEntry = () => {
 
       {/* Animal Selection Options */}
       <Card sx={{ mb: 3 }}>
-        <CardHeader title="Or Select Animals Manually" />
+        <CardHeader title="Select Animals for Measurement" />
         <CardContent>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6} md={3}>
@@ -543,9 +583,11 @@ const BulkMeasurementEntry = () => {
                   value={animalSelection}
                   onChange={(e) => setAnimalSelection(e.target.value)}
                 >
-                  <MenuItem value="recent">Recently Measured</MenuItem>
-                  <MenuItem value="all">All Study Animals</MenuItem>
-                  <MenuItem value="custom">Custom Selection</MenuItem>
+                  <MenuItem value="recent">Recently Measured (Auto-select)</MenuItem>
+                  <MenuItem value="all">All Study Animals (Auto-select)</MenuItem>
+                  <MenuItem value="unmeasured">Never Measured (Auto-select)</MenuItem>
+                  <MenuItem value="by_strain">By Strain (Auto-select)</MenuItem>
+                  <MenuItem value="custom">Manual Selection</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -559,19 +601,29 @@ const BulkMeasurementEntry = () => {
               />
             </Grid>
             <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button variant="outlined" onClick={selectAllAnimals}>
-                  Select All
-                </Button>
-                <Button variant="outlined" onClick={clearAnimalSelection}>
-                  Clear Selection
-                </Button>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                {animalSelection === 'custom' && (
+                  <>
+                    <Button variant="outlined" onClick={selectAllAnimals} size="small">
+                      Select All
+                    </Button>
+                    <Button variant="outlined" onClick={clearAnimalSelection} size="small">
+                      Clear All
+                    </Button>
+                  </>
+                )}
+                <Chip
+                  label={`${selectedAnimals.length} animals selected`}
+                  color={selectedAnimals.length > 0 ? 'primary' : 'default'}
+                  variant="outlined"
+                />
                 <Button
                   variant="contained"
                   onClick={selectAnimalsAndContinue}
                   disabled={selectedAnimals.length === 0}
+                  size="large"
                 >
-                  Continue with {selectedAnimals.length} Animals
+                  Continue with {selectedAnimals.length} Animals →
                 </Button>
               </Box>
             </Grid>
@@ -579,10 +631,78 @@ const BulkMeasurementEntry = () => {
         </CardContent>
       </Card>
 
+      {/* Quick Selection Actions */}
+      {animals.length > 0 && animalSelection === 'custom' && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="subtitle2" gutterBottom>
+              Quick Selection Actions:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+              {/* Recency-based quick selections */}
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => selectByRecency('recent')}
+                color="success"
+              >
+                Recently Measured ({animals.filter(a => a.measurement_recency === 'recent').length})
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => selectByRecency('week')}
+                color="warning"
+              >
+                This Week ({animals.filter(a => a.measurement_recency === 'week').length})
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => selectByRecency('unmeasured')}
+              >
+                Never Measured ({animals.filter(a => a.measurement_recency === 'unmeasured').length})
+              </Button>
+            </Box>
+
+            {/* Strain-based quick selections */}
+            {(() => {
+              const strains = [...new Set(animals.map(a => a.strain).filter(Boolean))];
+              if (strains.length > 1) {
+                return (
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Typography variant="caption" sx={{ alignSelf: 'center', mr: 1 }}>
+                      By Strain:
+                    </Typography>
+                    {strains.slice(0, 5).map(strain => (
+                      <Button
+                        key={strain}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => selectByStrain(strain)}
+                      >
+                        {strain} ({animals.filter(a => a.strain === strain).length})
+                      </Button>
+                    ))}
+                  </Box>
+                );
+              }
+              return null;
+            })()}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Animal List */}
       {animals.length > 0 && (
         <Card>
-          <CardHeader title={`Available Animals (${animals.length})`} />
+          <CardHeader
+            title={`Available Animals (${animals.length})`}
+            subheader={animalSelection !== 'custom' ?
+              `Auto-selected ${selectedAnimals.length} animals based on "${animalSelection}" criteria` :
+              `${selectedAnimals.length} manually selected`
+            }
+          />
           <CardContent>
             <TableContainer sx={{ maxHeight: 400 }}>
               <Table size="small">
