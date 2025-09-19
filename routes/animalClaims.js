@@ -236,6 +236,104 @@ router.post('/claim', [
   }
 });
 
+// @route   POST /api/animal-claims/bulk-claim
+// @desc    Claim multiple animals at once
+// @access  Private (researchers and above)
+router.post('/bulk-claim', [
+  auth,
+  [
+    check('animal_ids', 'Animal IDs array is required').isArray({ min: 1 }),
+    check('animal_ids.*', 'Each animal ID must be a valid UUID').isUUID(),
+    check('justification', 'Justification is required').notEmpty()
+  ]
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json(createErrorResponse('Validation failed', errors.array()));
+    }
+
+    const { animal_ids, justification, study_id, approved_until } = req.body;
+    const userId = req.user.id;
+
+    // Limit bulk claims to prevent abuse
+    if (animal_ids.length > 50) {
+      return res.status(400).json(createErrorResponse('Cannot claim more than 50 animals at once'));
+    }
+
+    // Check if all animals exist and are available
+    const animalCheck = await db.query(
+      'SELECT id, animal_number, availability_status FROM animals WHERE id = ANY($1)',
+      [animal_ids]
+    );
+
+    if (animalCheck.rows.length !== animal_ids.length) {
+      return res.status(404).json(createErrorResponse('One or more animals not found'));
+    }
+
+    const unavailableAnimals = animalCheck.rows.filter(a => a.availability_status !== 'available');
+    if (unavailableAnimals.length > 0) {
+      return res.status(400).json(createErrorResponse(
+        `Animals no longer available: ${unavailableAnimals.map(a => `#${a.animal_number}`).join(', ')}`
+      ));
+    }
+
+    // Begin transaction
+    await db.query('BEGIN');
+
+    try {
+      // Update all animals' availability status
+      await db.query(
+        'UPDATE animals SET availability_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($2)',
+        ['claimed', animal_ids]
+      );
+
+      // Create claim records for all animals using individual inserts
+      const claimResults = [];
+      for (const animal_id of animal_ids) {
+        const claimResult = await db.query(`
+          INSERT INTO animal_claims (
+            animal_id, requested_by, study_id, status, justification,
+            reviewed_by, reviewed_at, review_notes, approved_until
+          ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, $7, $8)
+          RETURNING id, requested_at
+        `, [
+          animal_id, userId, study_id, 'approved', justification,
+          userId, 'Auto-approved (MVP mode)', approved_until
+        ]);
+        claimResults.push(...claimResult.rows);
+      }
+
+      await db.query('COMMIT');
+
+      logger.info('Bulk animal claim successful', {
+        animal_count: animal_ids.length,
+        animal_numbers: animalCheck.rows.map(a => a.animal_number),
+        claimed_by: userId,
+        claim_ids: claimResults.map(r => r.id)
+      });
+
+      res.json({
+        success: true,
+        message: `Successfully claimed ${animal_ids.length} animals`,
+        claims_created: claimResults.length,
+        claimed_animals: animalCheck.rows.map(a => ({
+          id: a.id,
+          animal_number: a.animal_number
+        }))
+      });
+
+    } catch (error) {
+      await db.query('ROLLBACK');
+      throw error;
+    }
+
+  } catch (err) {
+    console.error('Error bulk claiming animals:', err);
+    res.status(500).json(createErrorResponse('Failed to claim animals'));
+  }
+});
+
 // @route   GET /api/animal-claims/my-claims
 // @desc    Get current user's animal claims
 // @access  Private
