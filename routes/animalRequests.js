@@ -233,6 +233,59 @@ router.get('/', auth, async (req, res) => {
 });
 
 /**
+ * GET /api/animal-requests/stats
+ * Get request statistics (facility managers only)
+ */
+router.get('/stats', auth, roleCheck(['facility_manager', 'admin']), async (req, res) => {
+  try {
+    const statsQuery = `
+      SELECT
+        COUNT(*) as total_requests,
+        COUNT(*) FILTER (WHERE status = 'submitted') as pending_review,
+        COUNT(*) FILTER (WHERE status = 'waitlisted') as waitlisted,
+        COUNT(*) FILTER (WHERE status = 'fulfilled') as fulfilled,
+        COUNT(*) FILTER (WHERE priority = 'urgent') as urgent_requests,
+        AVG(CASE WHEN fully_fulfilled_at IS NOT NULL
+            THEN EXTRACT(days FROM fully_fulfilled_at - created_at)
+            ELSE NULL END) as avg_fulfillment_days
+      FROM animal_requests
+      WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+    `;
+
+    const result = await db.query(statsQuery);
+    const stats = result.rows[0];
+
+    // Get top requested species/strains
+    const topRequestsQuery = `
+      SELECT
+        species,
+        strain,
+        COUNT(*) as request_count,
+        SUM(quantity_requested) as total_animals_requested
+      FROM animal_requests
+      WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY species, strain
+      ORDER BY request_count DESC, total_animals_requested DESC
+      LIMIT 10
+    `;
+
+    const topRequestsResult = await db.query(topRequestsQuery);
+
+    res.json({
+      ...stats,
+      top_requests: topRequestsResult.rows
+    });
+
+  } catch (error) {
+    console.error('Error fetching request stats:', error);
+    res.status(500).json({
+      message: 'Failed to fetch request statistics',
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/animal-requests/:id
  * Get a specific animal request with details
  */
@@ -976,59 +1029,6 @@ router.post('/auto-fulfill', auth, roleCheck(['facility_manager', 'admin']), asy
     console.error('Error in auto-fulfill:', error);
     res.status(500).json({
       message: 'Failed to auto-fulfill requests',
-      error: error.message
-    });
-  }
-});
-
-/**
- * GET /api/animal-requests/stats
- * Get request statistics (facility managers only)
- */
-router.get('/stats', auth, roleCheck(['facility_manager', 'admin']), async (req, res) => {
-  try {
-    const statsQuery = `
-      SELECT
-        COUNT(*) as total_requests,
-        COUNT(*) FILTER (WHERE status = 'submitted') as pending_review,
-        COUNT(*) FILTER (WHERE status = 'waitlisted') as waitlisted,
-        COUNT(*) FILTER (WHERE status = 'fulfilled') as fulfilled,
-        COUNT(*) FILTER (WHERE priority = 'urgent') as urgent_requests,
-        AVG(CASE WHEN fully_fulfilled_at IS NOT NULL
-            THEN EXTRACT(days FROM fully_fulfilled_at - created_at)
-            ELSE NULL END) as avg_fulfillment_days
-      FROM animal_requests
-      WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-    `;
-
-    const result = await db.query(statsQuery);
-    const stats = result.rows[0];
-
-    // Get top requested species/strains
-    const topRequestsQuery = `
-      SELECT
-        species,
-        strain,
-        COUNT(*) as request_count,
-        SUM(quantity_requested) as total_animals_requested
-      FROM animal_requests
-      WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-      GROUP BY species, strain
-      ORDER BY request_count DESC, total_animals_requested DESC
-      LIMIT 10
-    `;
-
-    const topRequestsResult = await db.query(topRequestsQuery);
-
-    res.json({
-      ...stats,
-      top_requests: topRequestsResult.rows
-    });
-
-  } catch (error) {
-    console.error('Error fetching request stats:', error);
-    res.status(500).json({
-      message: 'Failed to fetch request statistics',
       error: error.message
     });
   }

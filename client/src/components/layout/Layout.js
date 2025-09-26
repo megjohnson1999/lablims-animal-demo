@@ -40,7 +40,9 @@ import {
   Group as GroupIcon,
   Home as HousingIcon,
   Search as SearchIcon,
-  RequestPage as RequestIcon
+  RequestPage as RequestIcon,
+  Timeline as TimelineIcon,
+  Assessment as MeasurementIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -91,25 +93,48 @@ const Layout = () => {
   const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'facility_manager';
   const isFacilityManager = currentUser?.role === 'admin' || currentUser?.role === 'facility_manager';
 
-  const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
-    { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
-    { text: 'Bulk Measurements', icon: <AssignmentIcon />, path: '/bulk-measurements' },
-    { text: 'Animal Requests', icon: <RequestIcon />, path: '/animal-requests' },
-    ...(isFacilityManager ? [
-      { text: 'Facility Manager', icon: <AdminIcon />, path: '/facility-manager' }
-    ] : []),
-    { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
-    { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
-    { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
-    { text: 'Biological Samples', icon: <ScienceIcon />, path: '/biological-samples' },
-    { text: 'Procedures', icon: <ProtocolIcon />, path: '/procedures' },
-    { text: 'Inventory', icon: <InventoryIcon />, path: '/inventory' },
-    { text: 'Labels', icon: <LabelIcon />, path: '/labels' },
-    ...(canManageUsers ? [
-      { text: 'User Management', icon: <PeopleIcon />, path: '/admin/users' }
-    ] : [])
+  const menuSections = [
+    {
+      title: '',
+      items: [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/' }
+      ]
+    },
+    {
+      title: 'Animal Colony',
+      items: [
+        { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
+        { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
+        { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
+        { text: 'Animal Requests', icon: <RequestIcon />, path: '/animal-requests' },
+        ...(isFacilityManager ? [
+          { text: 'Facility Manager', icon: <AdminIcon />, path: '/facility-manager' }
+        ] : [])
+      ]
+    },
+    {
+      title: 'Research Operations',
+      items: [
+        { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
+        { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
+        { text: 'Bulk Measurements', icon: <MeasurementIcon />, path: '/bulk-measurements' },
+        { text: 'Biological Samples', icon: <ScienceIcon />, path: '/biological-samples' }
+      ]
+    },
+    {
+      title: 'Lab Infrastructure',
+      items: [
+        { text: 'Procedures', icon: <ProtocolIcon />, path: '/procedures' },
+        { text: 'Inventory', icon: <InventoryIcon />, path: '/inventory' },
+        { text: 'Labels', icon: <LabelIcon />, path: '/labels' }
+      ]
+    },
+    ...(canManageUsers ? [{
+      title: 'Administration',
+      items: [
+        { text: 'User Management', icon: <PeopleIcon />, path: '/admin/users' }
+      ]
+    }] : [])
   ];
 
   const drawer = (
@@ -120,21 +145,45 @@ const Layout = () => {
         </Typography>
       </Toolbar>
       <Divider />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton onClick={() => {
-              navigate(item.path);
-              if (mobileOpen) setMobileOpen(false);
-            }}>
-              <ListItemIcon>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+      {menuSections.map((section, sectionIndex) => (
+        <div key={sectionIndex}>
+          {section.title && (
+            <Typography
+              variant="overline"
+              sx={{
+                px: 2,
+                pt: 2,
+                pb: 1,
+                display: 'block',
+                color: 'text.secondary',
+                fontWeight: 600,
+                fontSize: '0.75rem'
+              }}
+            >
+              {section.title}
+            </Typography>
+          )}
+          <List sx={{ py: section.title ? 0 : 1 }}>
+            {section.items.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    navigate(item.path);
+                    if (mobileOpen) setMobileOpen(false);
+                  }}
+                  sx={{ px: 2 }}
+                >
+                  <ListItemIcon>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+          {sectionIndex < menuSections.length - 1 && <Divider sx={{ mx: 1 }} />}
+        </div>
+      ))}
     </div>
   );
 
