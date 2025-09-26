@@ -332,50 +332,107 @@ app.get('/api/admin/debug-users', async (req, res) => {
   }
 });
 
-// Test GET version of login to see if POST is specifically blocked
-app.get('/api/admin/test-get-login', async (req, res) => {
+// Working GET login endpoint (temporary workaround for Railway POST middleware issue)
+app.get('/api/auth/alt-login', async (req, res) => {
   try {
-    // Test with query params since it's GET
     const { username, password } = req.query;
     
     if (!username || !password) {
       return res.json({ 
         success: false,
         message: 'Username and password required as query params',
-        example: '/api/admin/test-get-login?username=admin&password=test'
+        example: '/api/auth/alt-login?username=admin&password=yourpassword'
       });
     }
     
-    // Get user from database
+    // Get user from database (same logic as main login route)
     const userResult = await pool.query(`
-      SELECT id, username, password, role, active
+      SELECT id, username, password, role, active, force_password_change,
+             failed_login_attempts, locked_until, first_name, last_name, email
       FROM users 
       WHERE username = $1
     `, [username]);
     
     if (userResult.rows.length === 0) {
-      return res.json({
-        success: false,
-        message: 'User not found'
-      });
+      return res.status(400).json({ msg: 'Invalid credentials' });
     }
     
     const user = userResult.rows[0];
+    
+    // Check if account is active
+    if (!user.active) {
+      return res.status(400).json({ msg: 'Account is deactivated. Please contact your lab manager.' });
+    }
+    
+    // Check if account is locked
+    if (user.locked_until && new Date() < new Date(user.locked_until)) {
+      const lockUntil = new Date(user.locked_until);
+      const remainingMinutes = Math.ceil((lockUntil - new Date()) / 60000);
+      return res.status(400).json({ 
+        msg: `Account is locked due to multiple failed login attempts. Try again in ${remainingMinutes} minutes.` 
+      });
+    }
+    
+    // Verify password
     const bcrypt = require('bcryptjs');
     const isMatch = await bcrypt.compare(password, user.password);
     
-    res.json({
-      success: true,
-      message: 'GET login test successful',
-      user_found: true,
-      password_match: isMatch,
-      note: 'This proves the issue is with POST requests being blocked by auth middleware'
-    });
+    if (!isMatch) {
+      // Increment failed attempts (simplified)
+      await pool.query(
+        'UPDATE users SET failed_login_attempts = failed_login_attempts + 1 WHERE id = $1', 
+        [user.id]
+      );
+      return res.status(400).json({ msg: 'Invalid credentials' });
+    }
+    
+    // Success - reset failed attempts and create JWT
+    await pool.query(`
+      UPDATE users 
+      SET failed_login_attempts = 0, 
+          locked_until = NULL,
+          last_login = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [user.id]);
+    
+    // Create JWT (same as main login route)
+    const jwt = require('jsonwebtoken');
+    const payload = {
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      }
+    };
+    
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' },
+      (err, token) => {
+        if (err) throw err;
+        
+        res.json({
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            force_password_change: user.force_password_change
+          }
+        });
+      }
+    );
     
   } catch (error) {
+    logger.error('Alternative login error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Server error during login'
     });
   }
 });
