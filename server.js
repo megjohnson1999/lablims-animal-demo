@@ -256,7 +256,7 @@ app.post('/api/admin/fix-users-table', async (req, res) => {
 app.post('/api/admin/deploy-schema', async (req, res) => {
   try {
     const fs = require('fs');
-    const cleanSchema = fs.readFileSync('./schema-only.sql', 'utf8');
+    const cleanSchema = fs.readFileSync('./clean-schema.sql', 'utf8');
     await pool.query(cleanSchema);
     
     res.json({
