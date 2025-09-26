@@ -252,20 +252,16 @@ app.post('/api/admin/fix-users-table', async (req, res) => {
   }
 });
 
-// Admin endpoint to deploy full schema using core schema.sql
+// Admin endpoint to deploy full schema using clean local dump
 app.post('/api/admin/deploy-schema', async (req, res) => {
   try {
     const fs = require('fs');
-    let schemaSQL = fs.readFileSync('./db/schema.sql', 'utf8');
-    
-    // Remove ALL INSERT statements - we'll create the schema structure only
-    schemaSQL = schemaSQL.replace(/INSERT INTO [^;]*;/g, '-- INSERT statements skipped for Railway deployment');
-    
-    await pool.query(schemaSQL);
+    const cleanSchema = fs.readFileSync('./schema-only.sql', 'utf8');
+    await pool.query(cleanSchema);
     
     res.json({
       success: true,
-      message: 'Full database schema deployed successfully (tables only, same structure as local)!'
+      message: 'Full database schema deployed successfully (same structure as local)!'
     });
   } catch (error) {
     logger.error('Schema deployment error:', error);
