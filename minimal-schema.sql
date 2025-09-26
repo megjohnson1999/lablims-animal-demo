@@ -103,6 +103,36 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Notifications table (required by frontend)
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  type VARCHAR(50) DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error')),
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Experimental studies table (required by frontend)
+CREATE TABLE IF NOT EXISTS experimental_studies (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  study_number INTEGER UNIQUE,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  principal_investigator UUID REFERENCES users(id),
+  status VARCHAR(50) DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'completed', 'cancelled')),
+  start_date DATE,
+  end_date DATE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Additional indexes
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_experimental_studies_pi ON experimental_studies(principal_investigator);
+
 -- Basic system options (minimal set)
 INSERT INTO system_options (category, option_key, option_value, description) VALUES
 ('animal_species', 'mouse', 'Mus musculus', 'Laboratory mouse'),
