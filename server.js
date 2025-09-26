@@ -180,7 +180,7 @@ app.post('/api/admin/fix-schema-inserts', async (req, res) => {
   }
 });
 
-// Admin endpoint to reset and deploy full schema (clean slate)
+// Admin endpoint to reset and deploy working schema (clean slate)
 app.post('/api/admin/reset-and-deploy', async (req, res) => {
   try {
     // Drop all tables to start fresh
@@ -191,22 +191,14 @@ app.post('/api/admin/reset-and-deploy', async (req, res) => {
       GRANT ALL ON SCHEMA public TO public;
     `);
     
-    // Deploy core schema first (without problematic inserts)
+    // Deploy the working schema from local database
     const fs = require('fs');
-    let schemaSQL = fs.readFileSync('./db/schema.sql', 'utf8');
-    
-    // Remove the problematic INSERT statements that cause NULL violations
-    schemaSQL = schemaSQL.replace(/INSERT INTO system_options \(category, option_key, option_value, display_text, description, is_active\) VALUES[\s\S]*?ON CONFLICT \(category, option_key\) DO NOTHING;/g, '-- Problematic inserts removed');
-    
-    await pool.query(schemaSQL);
-    
-    // Now apply the fixed inserts
-    const fixSQL = fs.readFileSync('./fix-schema-inserts.sql', 'utf8');
-    await pool.query(fixSQL);
+    const workingSchema = fs.readFileSync('./working-schema.sql', 'utf8');
+    await pool.query(workingSchema);
     
     res.json({
       success: true,
-      message: 'Database reset and full schema deployed successfully with fixes!'
+      message: 'Database reset and working schema deployed successfully (same as local)!'
     });
   } catch (error) {
     logger.error('Reset and deploy error:', error);
