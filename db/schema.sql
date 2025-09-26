@@ -1262,7 +1262,7 @@ CREATE INDEX IF NOT EXISTS idx_extracted_protocol_data_job_id ON extracted_proto
 CREATE INDEX IF NOT EXISTS idx_protocol_documents_category ON protocol_documents(category);
 
 -- System configuration indexes
-CREATE UNIQUE INDEX IF NOT EXISTS idx_system_options_category_key ON system_options(category, option_key);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_system_options_category_value ON system_options(category, option_value);
 CREATE INDEX IF NOT EXISTS idx_system_options_category_active ON system_options(category, is_active);
 
 -- Performance optimization indexes for search functionality
@@ -1475,7 +1475,7 @@ INSERT INTO system_options (category, option_key, option_value, display_order, d
 ('experiment_status', 'failed', 'Failed', 4, 'Experiment failed or was terminated'),
 ('experiment_status', 'on_hold', 'On Hold', 5, 'Experiment temporarily paused')
 
-ON CONFLICT (category, option_key) DO NOTHING;
+ON CONFLICT (category, option_value) DO NOTHING;
 
 -- Default inventory categories
 INSERT INTO inventory_categories (category_name, description, default_unit) VALUES
