@@ -159,6 +159,27 @@ app.post('/api/admin/fix-id-functions', async (req, res) => {
   }
 });
 
+// Admin endpoint to deploy minimal working schema
+app.post('/api/admin/deploy-minimal-schema', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const schemaSQL = fs.readFileSync('./minimal-schema.sql', 'utf8');
+    await pool.query(schemaSQL);
+    
+    res.json({
+      success: true,
+      message: 'Minimal database schema deployed successfully!'
+    });
+  } catch (error) {
+    logger.error('Minimal schema deployment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Minimal schema deployment error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to deploy full schema using core schema.sql
 app.post('/api/admin/deploy-schema', async (req, res) => {
   try {
