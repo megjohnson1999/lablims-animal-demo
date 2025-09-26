@@ -285,6 +285,76 @@ app.post('/api/admin/load-basic-sample-data', async (req, res) => {
   }
 });
 
+// Debug endpoint to check users table (no auth required)
+app.get('/api/admin/debug-users', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, username, email, role, active, force_password_change, 
+             failed_login_attempts, locked_until, 
+             CASE WHEN password IS NOT NULL THEN 'has_password' ELSE 'no_password' END as password_status,
+             created_at
+      FROM users 
+      ORDER BY created_at DESC
+      LIMIT 5
+    `);
+    
+    res.json({
+      success: true,
+      count: result.rows.length,
+      users: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Debug endpoint to test password verification (no auth required)
+app.post('/api/admin/debug-password', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+    
+    const userResult = await pool.query(`
+      SELECT id, username, password, role, active, force_password_change
+      FROM users 
+      WHERE username = $1
+    `, [username]);
+    
+    if (userResult.rows.length === 0) {
+      return res.json({
+        success: false,
+        message: 'User not found',
+        username
+      });
+    }
+    
+    const user = userResult.rows[0];
+    const bcrypt = require('bcryptjs');
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    res.json({
+      success: true,
+      user_found: true,
+      password_match: isMatch,
+      user_active: user.active,
+      force_password_change: user.force_password_change,
+      password_length: user.password.length,
+      password_starts_with: user.password.substring(0, 7) + '...'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Debug endpoint to check available animals (no auth required)
 app.get('/api/admin/debug-animals', async (req, res) => {
   try {
