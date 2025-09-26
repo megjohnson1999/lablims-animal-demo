@@ -1444,12 +1444,12 @@ INSERT INTO projects (
 ) ON CONFLICT (project_number) DO NOTHING;
 
 -- Default system configuration data
-INSERT INTO system_options (category, option_key, option_value, display_order, description) VALUES
-('activity_status', 'active', 'Active', 1, 'Specimen is active and available for use'),
-('activity_status', 'inactive', 'Inactive', 2, 'Specimen is inactive but preserved'),
-('activity_status', 'qc_failed', 'QC Failed', 3, 'Specimen failed quality control'),
-('activity_status', 'consumed', 'Consumed', 4, 'Specimen has been fully consumed'),
-('activity_status', 'archived', 'Archived', 5, 'Specimen is archived for long-term storage'),
+INSERT INTO system_options (category, option_key, option_value, display_text, description, is_active) VALUES
+('activity_status', 'active', 'Active', 'Active', 'Specimen is active and available for use', true),
+('activity_status', 'inactive', 'Inactive', 'Inactive', 'Specimen is inactive but preserved', true),
+('activity_status', 'qc_failed', 'QC Failed', 'QC Failed', 'Specimen failed quality control', true),
+('activity_status', 'consumed', 'Consumed', 'Consumed', 'Specimen has been fully consumed', true),
+('activity_status', 'archived', 'Archived', 'Archived', 'Specimen is archived for long-term storage', true),
 
 ('collection_category', 'clinical', 'Clinical Sample', 1, 'Sample collected for clinical purposes'),
 ('collection_category', 'research', 'Research Sample', 2, 'Sample collected for research purposes'), 

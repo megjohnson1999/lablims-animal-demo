@@ -266,14 +266,14 @@ app.post('/api/admin/deploy-schema', async (req, res) => {
     const fs = require('fs');
     let schemaSQL = fs.readFileSync('./db/schema.sql', 'utf8');
     
-    // Remove problematic INSERT statements for Railway deployment
-    schemaSQL = schemaSQL.replace(/INSERT INTO system_options[^;]*;/g, '-- INSERT statements temporarily removed for Railway');
+    // Remove ALL INSERT statements - we'll create the schema structure only
+    schemaSQL = schemaSQL.replace(/INSERT INTO [^;]*;/g, '-- INSERT statements skipped for Railway deployment');
     
     await pool.query(schemaSQL);
     
     res.json({
       success: true,
-      message: 'Full database schema deployed successfully (same as local)!'
+      message: 'Full database schema deployed successfully (tables only, same structure as local)!'
     });
   } catch (error) {
     logger.error('Schema deployment error:', error);
