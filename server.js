@@ -191,9 +191,13 @@ app.post('/api/admin/reset-and-deploy', async (req, res) => {
       GRANT ALL ON SCHEMA public TO public;
     `);
     
-    // Deploy the working schema from local database
+    // Deploy the working schema from local database (schema only, no data)
     const fs = require('fs');
-    const workingSchema = fs.readFileSync('./working-schema.sql', 'utf8');
+    let workingSchema = fs.readFileSync('./working-schema.sql', 'utf8');
+    
+    // Remove any INSERT statements to avoid data conflicts
+    workingSchema = workingSchema.replace(/INSERT INTO [^;]*;/g, '-- INSERT statements skipped');
+    
     await pool.query(workingSchema);
     
     res.json({
