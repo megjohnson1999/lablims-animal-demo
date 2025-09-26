@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(50) NOT NULL DEFAULT 'researcher' CHECK (role IN ('admin', 'facility_manager', 'veterinarian', 'researcher', 'technician')),
   active BOOLEAN DEFAULT TRUE,
   force_password_change BOOLEAN DEFAULT FALSE,
+  failed_login_attempts INTEGER DEFAULT 0,
+  locked_until TIMESTAMP NULL,
+  last_login TIMESTAMP NULL,
+  password_changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

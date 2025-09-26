@@ -180,6 +180,27 @@ app.post('/api/admin/deploy-minimal-schema', async (req, res) => {
   }
 });
 
+// Admin endpoint to fix users table with missing columns
+app.post('/api/admin/fix-users-table', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const fixSQL = fs.readFileSync('./fix-users-table.sql', 'utf8');
+    await pool.query(fixSQL);
+    
+    res.json({
+      success: true,
+      message: 'Users table fixed successfully! Missing authentication columns added.'
+    });
+  } catch (error) {
+    logger.error('Users table fix error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Users table fix error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to deploy full schema using core schema.sql
 app.post('/api/admin/deploy-schema', async (req, res) => {
   try {
