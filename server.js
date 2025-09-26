@@ -159,6 +159,27 @@ app.post('/api/admin/fix-id-functions', async (req, res) => {
   }
 });
 
+// Admin endpoint to fix schema INSERT issues (Railway-specific)
+app.post('/api/admin/fix-schema-inserts', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const fixSQL = fs.readFileSync('./fix-schema-inserts.sql', 'utf8');
+    await pool.query(fixSQL);
+    
+    res.json({
+      success: true,
+      message: 'Schema INSERT statements fixed successfully!'
+    });
+  } catch (error) {
+    logger.error('Schema fix error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Schema fix error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to reset and deploy full schema (clean slate)
 app.post('/api/admin/reset-and-deploy', async (req, res) => {
   try {
@@ -170,14 +191,22 @@ app.post('/api/admin/reset-and-deploy', async (req, res) => {
       GRANT ALL ON SCHEMA public TO public;
     `);
     
-    // Deploy full schema
+    // Deploy core schema first (without problematic inserts)
     const fs = require('fs');
-    const schemaSQL = fs.readFileSync('./db/schema.sql', 'utf8');
+    let schemaSQL = fs.readFileSync('./db/schema.sql', 'utf8');
+    
+    // Remove the problematic INSERT statements that cause NULL violations
+    schemaSQL = schemaSQL.replace(/INSERT INTO system_options \(category, option_key, option_value, display_text, description, is_active\) VALUES[\s\S]*?ON CONFLICT \(category, option_key\) DO NOTHING;/g, '-- Problematic inserts removed');
+    
     await pool.query(schemaSQL);
+    
+    // Now apply the fixed inserts
+    const fixSQL = fs.readFileSync('./fix-schema-inserts.sql', 'utf8');
+    await pool.query(fixSQL);
     
     res.json({
       success: true,
-      message: 'Database reset and full schema deployed successfully!'
+      message: 'Database reset and full schema deployed successfully with fixes!'
     });
   } catch (error) {
     logger.error('Reset and deploy error:', error);
