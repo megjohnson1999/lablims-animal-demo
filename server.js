@@ -332,6 +332,54 @@ app.get('/api/admin/debug-users', async (req, res) => {
   }
 });
 
+// Test GET version of login to see if POST is specifically blocked
+app.get('/api/admin/test-get-login', async (req, res) => {
+  try {
+    // Test with query params since it's GET
+    const { username, password } = req.query;
+    
+    if (!username || !password) {
+      return res.json({ 
+        success: false,
+        message: 'Username and password required as query params',
+        example: '/api/admin/test-get-login?username=admin&password=test'
+      });
+    }
+    
+    // Get user from database
+    const userResult = await pool.query(`
+      SELECT id, username, password, role, active
+      FROM users 
+      WHERE username = $1
+    `, [username]);
+    
+    if (userResult.rows.length === 0) {
+      return res.json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    const bcrypt = require('bcryptjs');
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    res.json({
+      success: true,
+      message: 'GET login test successful',
+      user_found: true,
+      password_match: isMatch,
+      note: 'This proves the issue is with POST requests being blocked by auth middleware'
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Debug endpoint to test password verification (no auth required)
 app.post('/api/admin/debug-password', async (req, res) => {
   try {
