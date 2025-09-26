@@ -225,9 +225,13 @@ app.post('/api/admin/deploy-minimal-schema', async (req, res) => {
     const schemaSQL = fs.readFileSync('./minimal-schema.sql', 'utf8');
     await pool.query(schemaSQL);
     
+    // Also extend with missing tables needed by frontend
+    const extendSQL = fs.readFileSync('./extend-minimal-schema.sql', 'utf8');
+    await pool.query(extendSQL);
+    
     res.json({
       success: true,
-      message: 'Minimal database schema deployed successfully!'
+      message: 'Minimal database schema deployed successfully with frontend extensions!'
     });
   } catch (error) {
     logger.error('Minimal schema deployment error:', error);
