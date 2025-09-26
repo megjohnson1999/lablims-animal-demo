@@ -285,6 +285,54 @@ app.post('/api/admin/load-sample-data', async (req, res) => {
   }
 });
 
+// Admin endpoint to load minimal sample data for Railway
+app.post('/api/admin/load-minimal-data', async (req, res) => {
+  try {
+    // Insert sample animals that work with minimal schema
+    await pool.query(`
+      INSERT INTO animals (animal_number, species, strain, sex, birth_date, status, availability_status) VALUES
+      (1001, 'Mus musculus', 'C57BL/6J', 'M', '2024-08-01', 'active', 'available'),
+      (1002, 'Mus musculus', 'C57BL/6J', 'F', '2024-08-01', 'active', 'available'),
+      (1003, 'Mus musculus', 'BALB/c', 'M', '2024-08-15', 'active', 'available'),
+      (1004, 'Mus musculus', 'BALB/c', 'F', '2024-08-15', 'active', 'available'),
+      (1005, 'Rattus norvegicus', 'Wistar', 'M', '2024-07-20', 'active', 'available')
+      ON CONFLICT (animal_number) DO NOTHING
+    `);
+    
+    // Insert sample housing
+    await pool.query(`
+      INSERT INTO housing (housing_number, location, capacity, current_occupancy, status) VALUES
+      ('R1-A1', 'Room 1, Rack A, Level 1', 5, 2, 'active'),
+      ('R1-A2', 'Room 1, Rack A, Level 2', 5, 1, 'active'),
+      ('R2-B1', 'Room 2, Rack B, Level 1', 10, 0, 'active')
+      ON CONFLICT DO NOTHING
+    `);
+    
+    // Add some basic system options
+    await pool.query(`
+      INSERT INTO system_options (category, option_key, option_value, description) VALUES
+      ('animal_species', 'mouse', 'Mus musculus', 'Laboratory mouse'),
+      ('animal_species', 'rat', 'Rattus norvegicus', 'Laboratory rat'),
+      ('animal_strains', 'c57bl6j', 'C57BL/6J', 'Common inbred mouse strain'),
+      ('animal_strains', 'balbc', 'BALB/c', 'Albino inbred mouse strain'),
+      ('animal_strains', 'wistar', 'Wistar', 'Outbred rat strain')
+      ON CONFLICT (category, option_key) DO NOTHING
+    `);
+    
+    res.json({
+      success: true,
+      message: 'Minimal sample data loaded successfully! Added 5 animals and 3 housing units.'
+    });
+  } catch (error) {
+    logger.error('Minimal sample data loading error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Minimal sample data loading error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to load basic sample data (animals and housing only)
 app.post('/api/admin/load-basic-sample-data', async (req, res) => {
   try {
@@ -552,10 +600,10 @@ app.get('/api/admin/debug-animals', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         a.id, a.animal_number, a.species, a.strain, a.availability_status, a.status,
-        h.location as housing_location
+        a.sex, a.birth_date, a.created_at
       FROM animals a
-      LEFT JOIN housing h ON a.housing_id = h.id
       WHERE a.availability_status = 'available' AND a.status = 'active'
+      ORDER BY a.animal_number
       LIMIT 10
     `);
     
@@ -563,6 +611,31 @@ app.get('/api/admin/debug-animals', async (req, res) => {
       success: true,
       count: result.rows.length,
       animals: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Simplified animals endpoint that works with minimal schema
+app.get('/api/animals/simple', auth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, animal_number, species, strain, sex, birth_date,
+        status, availability_status, created_at
+      FROM animals 
+      ORDER BY animal_number
+      LIMIT 50
+    `);
+    
+    res.json({
+      success: true,
+      animals: result.rows,
+      total: result.rows.length
     });
   } catch (error) {
     res.status(500).json({
