@@ -159,6 +159,36 @@ app.post('/api/admin/fix-id-functions', async (req, res) => {
   }
 });
 
+// Admin endpoint to reset and deploy full schema (clean slate)
+app.post('/api/admin/reset-and-deploy', async (req, res) => {
+  try {
+    // Drop all tables to start fresh
+    await pool.query(`
+      DROP SCHEMA public CASCADE;
+      CREATE SCHEMA public;
+      GRANT ALL ON SCHEMA public TO postgres;
+      GRANT ALL ON SCHEMA public TO public;
+    `);
+    
+    // Deploy full schema
+    const fs = require('fs');
+    const schemaSQL = fs.readFileSync('./db/schema.sql', 'utf8');
+    await pool.query(schemaSQL);
+    
+    res.json({
+      success: true,
+      message: 'Database reset and full schema deployed successfully!'
+    });
+  } catch (error) {
+    logger.error('Reset and deploy error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Reset and deploy error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to deploy minimal working schema
 app.post('/api/admin/deploy-minimal-schema', async (req, res) => {
   try {
