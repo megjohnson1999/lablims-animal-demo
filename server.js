@@ -302,6 +302,27 @@ app.post('/api/admin/fix-missing-schema', async (req, res) => {
   }
 });
 
+// Admin endpoint to add missing tables for frontend
+app.post('/api/admin/add-missing-tables', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const migrationSQL = fs.readFileSync('./add-missing-tables.sql', 'utf8');
+    await pool.query(migrationSQL);
+    
+    res.json({
+      success: true,
+      message: 'Missing tables added successfully! Notifications, studies, specimens, and measurements should now work.'
+    });
+  } catch (error) {
+    logger.error('Missing tables migration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Missing tables migration error',
+      error: error.message
+    });
+  }
+});
+
 // Admin endpoint to apply new schema changes for animal claiming
 app.post('/api/admin/apply-schema-changes', async (req, res) => {
   try {

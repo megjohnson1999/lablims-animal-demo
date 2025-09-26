@@ -1582,7 +1582,7 @@ ORDER BY sample_type, anatomical_site;
 -- ================================================================================
 
 -- Insert common sample types for research organisms
-INSERT INTO system_options (category, option_value, display_text, description, is_active) VALUES
+INSERT INTO system_options (category, option_key, option_value, display_text, description, is_active) VALUES
 ('sample_type', 'blood_whole', 'Whole Blood', 'Fresh whole blood sample', true),
 ('sample_type', 'blood_serum', 'Serum', 'Blood serum after coagulation', true),
 ('sample_type', 'blood_plasma', 'Plasma', 'Blood plasma with anticoagulant', true),
@@ -1603,7 +1603,7 @@ INSERT INTO system_options (category, option_value, display_text, description, i
 ON CONFLICT (category, option_value) DO NOTHING;
 
 -- Insert collection methods
-INSERT INTO system_options (category, option_value, display_text, description, is_active) VALUES
+INSERT INTO system_options (category, option_key, option_value, display_text, description, is_active) VALUES
 ('collection_method', 'terminal_bleed', 'Terminal Bleed', 'Terminal blood collection at euthanasia', true),
 ('collection_method', 'serial_bleed', 'Serial Blood Draw', 'Non-terminal blood collection', true),
 ('collection_method', 'necropsy', 'Necropsy', 'Post-mortem tissue collection', true),
@@ -1614,7 +1614,7 @@ INSERT INTO system_options (category, option_value, display_text, description, i
 ON CONFLICT (category, option_value) DO NOTHING;
 
 -- Insert preservation methods
-INSERT INTO system_options (category, option_value, display_text, description, is_active) VALUES
+INSERT INTO system_options (category, option_key, option_value, display_text, description, is_active) VALUES
 ('preservation_method', 'fresh', 'Fresh', 'Fresh sample, no preservation', true),
 ('preservation_method', 'frozen_minus80', 'Frozen -80°C', 'Frozen at -80°C', true),
 ('preservation_method', 'frozen_minus20', 'Frozen -20°C', 'Frozen at -20°C', true),
