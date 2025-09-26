@@ -465,6 +465,7 @@ CREATE TABLE IF NOT EXISTS system_options (
   category VARCHAR(50) NOT NULL,
   option_key VARCHAR(100) NOT NULL,
   option_value VARCHAR(255) NOT NULL,
+  display_text VARCHAR(255),
   display_order INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
   description TEXT,
