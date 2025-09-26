@@ -227,7 +227,7 @@ app.post('/api/admin/deploy-minimal-schema', async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Minimal database schema deployed successfully with frontend tables!'
+      message: 'Minimal database schema deployed successfully!'
     });
   } catch (error) {
     logger.error('Minimal schema deployment error:', error);
