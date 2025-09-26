@@ -376,6 +376,71 @@ app.post('/api/admin/debug-password', async (req, res) => {
   }
 });
 
+// Simple login test endpoint without JWT generation (bypass JWT issues)
+app.post('/api/admin/test-login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+    
+    // Get user from database
+    const userResult = await pool.query(`
+      SELECT id, username, password, role, active, force_password_change,
+             failed_login_attempts, locked_until
+      FROM users 
+      WHERE username = $1
+    `, [username]);
+    
+    if (userResult.rows.length === 0) {
+      return res.json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Check if account is locked
+    if (user.locked_until && new Date() < new Date(user.locked_until)) {
+      return res.json({
+        success: false,
+        message: 'Account is locked'
+      });
+    }
+    
+    // Verify password
+    const bcrypt = require('bcryptjs');
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
+      return res.json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+    
+    // Success - return user info (no JWT for this test)
+    res.json({
+      success: true,
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        active: user.active
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Debug endpoint to check available animals (no auth required)
 app.get('/api/admin/debug-animals', async (req, res) => {
   try {
