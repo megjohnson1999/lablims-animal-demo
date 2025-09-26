@@ -620,8 +620,8 @@ app.get('/api/admin/debug-animals', async (req, res) => {
   }
 });
 
-// Simplified animals endpoint that works with minimal schema
-app.get('/api/animals/simple', auth, async (req, res) => {
+// Simplified animals endpoint that works with minimal schema (no auth for now)
+app.get('/api/animals/simple', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
