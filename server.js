@@ -27,38 +27,58 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Initialize database - apply time series migration if needed
+// Initialize database - apply full schema and demo data if needed
 async function initializeDatabase() {
   try {
-    console.log('🚀 Database initialization - checking for time series tables...');
+    console.log('🚀 Database initialization - checking database schema...');
 
-    // Check if measurement tables exist
+    // Check if core tables exist
     const tableCheck = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'animal_measurements'
+        WHERE table_schema = 'public' AND table_name = 'users'
       );
     `);
 
     if (!tableCheck.rows[0].exists) {
-      console.log('📊 Time series tables missing - applying migration...');
+      console.log('📊 Database is empty - applying full schema...');
 
-      // Read and apply the migration
       const fs = require('fs');
       const path = require('path');
-      const migrationPath = path.join(__dirname, 'db', 'migrations', 'add_time_series_measurements.sql');
-      const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
-      await pool.query(migrationSQL);
+      // Apply main schema
+      const schemaPath = path.join(__dirname, 'db', 'schema.sql');
+      const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
 
-      console.log('✅ Time series measurement system migration applied successfully');
+      // Remove the \restrict command that's specific to pg_dump
+      const cleanedSchema = schemaSQL.replace(/\\restrict.*$/m, '');
+
+      await pool.query(cleanedSchema);
+      console.log('✅ Database schema applied successfully');
+
+      // Apply demo data if in development or if LOAD_DEMO_DATA env var is set
+      if (process.env.NODE_ENV !== 'production' || process.env.LOAD_DEMO_DATA === 'true') {
+        console.log('📝 Loading demo data...');
+        const demoDataPath = path.join(__dirname, 'db', 'demo-data.sql');
+
+        if (fs.existsSync(demoDataPath)) {
+          const demoDataSQL = fs.readFileSync(demoDataPath, 'utf8');
+          await pool.query(demoDataSQL);
+          console.log('✅ Demo data loaded successfully');
+          console.log('🔐 Default admin credentials: admin@example.com / admin123');
+        }
+      } else {
+        console.log('⚠️  Production mode: Skipping demo data. Set LOAD_DEMO_DATA=true to load sample data.');
+      }
+
     } else {
-      console.log('✅ Time series tables already exist - skipping migration');
+      console.log('✅ Database schema already exists - skipping initialization');
     }
 
   } catch (error) {
     console.error('❌ Database initialization error:', error.message);
-    // Don't fail startup if migration fails - just log it
+    console.error('Full error:', error);
+    // Don't fail startup if initialization fails - just log it
   }
 }
 

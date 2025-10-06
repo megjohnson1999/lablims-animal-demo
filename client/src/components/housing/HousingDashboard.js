@@ -30,11 +30,11 @@ import {
   Pets as PetsIcon,
   Home as HomeIcon,
   Warning as WarningIcon,
-  CheckCircle as CheckCircleIcon,
   Info as InfoIcon,
   Refresh as RefreshIcon,
   Print as PrintIcon
 } from '@mui/icons-material';
+import HousingHierarchyForm from './HousingHierarchyForm';
 import { useAuth } from '../../context/AuthContext';
 import { canEditLabData } from '../../utils/roleUtils';
 import housingAPI from '../../services/housingAPI';
@@ -53,8 +53,20 @@ const HousingDashboard = () => {
   const [selectedHousing, setSelectedHousing] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
+  const [filters, setFilters] = useState({
+    building: '',
+    room: '',
+    rack: '',
+    cage: ''
+  });
+  const [filteredHousing, setFilteredHousing] = useState([]);
+
   const [newHousingData, setNewHousingData] = useState({
     location: '',
+    building: '',
+    room: '',
+    rack: '',
+    cage: '',
     cage_type: '',
     capacity: '',
     environmental_conditions: '',
@@ -64,6 +76,26 @@ const HousingDashboard = () => {
   useEffect(() => {
     loadHousingData();
   }, []);
+
+  useEffect(() => {
+    // Apply filters to housing data
+    let filtered = housing;
+
+    if (filters.building) {
+      filtered = filtered.filter(h => h.building === filters.building);
+    }
+    if (filters.room) {
+      filtered = filtered.filter(h => h.room === filters.room);
+    }
+    if (filters.rack) {
+      filtered = filtered.filter(h => h.rack === filters.rack);
+    }
+    if (filters.cage) {
+      filtered = filtered.filter(h => h.cage === filters.cage);
+    }
+
+    setFilteredHousing(filtered);
+  }, [housing, filters]);
 
   const loadHousingData = async () => {
     try {
@@ -134,6 +166,10 @@ const HousingDashboard = () => {
       setCreateDialogOpen(false);
       setNewHousingData({
         location: '',
+        building: '',
+        room: '',
+        rack: '',
+        cage: '',
         cage_type: '',
         capacity: '',
         environmental_conditions: '',
@@ -193,6 +229,89 @@ const HousingDashboard = () => {
         </Box>
       </Box>
 
+      {/* Location Filters */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Filter by Location
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth>
+              <InputLabel>Building</InputLabel>
+              <Select
+                value={filters.building}
+                label="Building"
+                onChange={(e) => setFilters({ ...filters, building: e.target.value, room: '', rack: '', cage: '' })}
+              >
+                <MenuItem value="">All Buildings</MenuItem>
+                {[...new Set(housing.map(h => h.building).filter(Boolean))].map(building => (
+                  <MenuItem key={building} value={building}>{building}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth disabled={!filters.building}>
+              <InputLabel>Room</InputLabel>
+              <Select
+                value={filters.room}
+                label="Room"
+                onChange={(e) => setFilters({ ...filters, room: e.target.value, rack: '', cage: '' })}
+              >
+                <MenuItem value="">All Rooms</MenuItem>
+                {[...new Set(housing.filter(h => h.building === filters.building).map(h => h.room).filter(Boolean))].map(room => (
+                  <MenuItem key={room} value={room}>{room}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth disabled={!filters.room}>
+              <InputLabel>Rack</InputLabel>
+              <Select
+                value={filters.rack}
+                label="Rack"
+                onChange={(e) => setFilters({ ...filters, rack: e.target.value, cage: '' })}
+              >
+                <MenuItem value="">All Racks</MenuItem>
+                {[...new Set(housing.filter(h => h.building === filters.building && h.room === filters.room).map(h => h.rack).filter(Boolean))].map(rack => (
+                  <MenuItem key={rack} value={rack}>{rack}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth disabled={!filters.rack}>
+              <InputLabel>Cage</InputLabel>
+              <Select
+                value={filters.cage}
+                label="Cage"
+                onChange={(e) => setFilters({ ...filters, cage: e.target.value })}
+              >
+                <MenuItem value="">All Cages</MenuItem>
+                {[...new Set(housing.filter(h => h.building === filters.building && h.room === filters.room && h.rack === filters.rack).map(h => h.cage).filter(Boolean))].map(cage => (
+                  <MenuItem key={cage} value={cage}>{cage}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+        {(filters.building || filters.room || filters.rack || filters.cage) && (
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setFilters({ building: '', room: '', rack: '', cage: '' })}
+            >
+              Clear All Filters
+            </Button>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Showing {filteredHousing.length} of {housing.length} housing units
+            </Typography>
+          </Box>
+        )}
+      </Paper>
+
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -239,7 +358,7 @@ const HousingDashboard = () => {
 
       {/* Housing Units Grid */}
       <Grid container spacing={2}>
-        {housing.map((house) => (
+        {filteredHousing.map((house) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={house.id}>
             <Card 
               sx={{ 
@@ -262,7 +381,7 @@ const HousingDashboard = () => {
                 </Box>
                 
                 <Typography color="text.secondary" gutterBottom>
-                  <strong>Location:</strong> {house.location}
+                  <strong>Location:</strong> {house.hierarchy_path || house.location}
                 </Typography>
                 
                 {house.cage_type && (
@@ -304,12 +423,17 @@ const HousingDashboard = () => {
               </CardContent>
               
               <CardActions>
-                <Button 
-                  size="small" 
+                <Button
+                  size="small"
                   startIcon={<PetsIcon />}
                   disabled={house.current_occupancy === 0}
+                  onClick={() => {
+                    if (house.current_occupancy > 0) {
+                      navigate(`/animals?housing=${house.id}`);
+                    }
+                  }}
                 >
-                  View Subjects ({house.total_animals_assigned})
+                  View Subjects ({house.total_animals_assigned || house.current_occupancy})
                 </Button>
                 {canEdit && (
                   <IconButton 
@@ -325,21 +449,21 @@ const HousingDashboard = () => {
         ))}
       </Grid>
 
+
       {/* Create Housing Dialog */}
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create Housing Unit</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Location"
-                  value={newHousingData.location}
-                  onChange={(e) => setNewHousingData({...newHousingData, location: e.target.value})}
-                  required
-                />
-              </Grid>
+            {/* Hierarchy Form */}
+            <HousingHierarchyForm
+              formData={newHousingData}
+              onChange={setNewHousingData}
+            />
+
+            {/* Other Housing Fields */}
+            <Box sx={{ mt: 3 }}>
+              <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Housing Type</InputLabel>
@@ -390,15 +514,16 @@ const HousingDashboard = () => {
                   onChange={(e) => setNewHousingData({...newHousingData, notes: e.target.value})}
                 />
               </Grid>
-            </Grid>
+              </Grid>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={handleCreateHousing}
             variant="contained"
-            disabled={!newHousingData.location || !newHousingData.capacity}
+            disabled={(!newHousingData.location && !newHousingData.building) || !newHousingData.capacity}
           >
             Create Housing Unit
           </Button>

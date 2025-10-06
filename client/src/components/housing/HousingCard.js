@@ -16,7 +16,10 @@ const HousingCard = ({
   cardSize = 'standard', // 'standard', 'small', 'large'
   ...props 
 }) => {
-  const barcodeText = housing?.housing_number || housing?.id?.substring(0, 8);
+  // Generate a more barcode-friendly text
+  const barcodeText = housing?.housing_number
+    ? `HSG${String(housing.housing_number).padStart(6, '0')}`
+    : `HSG${housing?.id?.substring(0, 6) || '000000'}`;
   
   const cardSizes = {
     small: {
@@ -86,8 +89,8 @@ const HousingCard = ({
   };
 
   return (
-    <Paper 
-      sx={{ 
+    <Paper
+      sx={{
         width: size.width,
         height: size.height,
         padding: size.padding,
@@ -96,147 +99,188 @@ const HousingCard = ({
         display: 'flex',
         flexDirection: 'column',
         pageBreakInside: 'avoid',
-        margin: '0.5in'
+        margin: '0.5in',
+        overflow: 'hidden',
+        boxSizing: 'border-box'
       }}
       {...props}
     >
-      {/* Header Section */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            fontSize: size.titleSize, 
-            fontWeight: 'bold',
-            textTransform: 'uppercase'
-          }}
-        >
-          Housing Unit
-        </Typography>
-        <Chip
-          label={`${housing.current_occupancy}/${housing.capacity}`}
-          color={getOccupancyColor()}
-          size="small"
-          sx={{ fontSize: size.fontSize }}
-        />
+      {/* Header with Barcode */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, gap: 1 }}>
+        {/* Left side: Title and details */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontSize: size.titleSize,
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              mb: 0.5
+            }}
+          >
+            Housing Unit
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: size.fontSize,
+              fontWeight: 'bold',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {housing.housing_number || `HSG-${housing.id?.substring(0, 6)}`}
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: size.fontSize,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {housing.location}
+          </Typography>
+        </Box>
+
+        {/* Right side: Barcode */}
+        <Box sx={{ flexShrink: 0, maxWidth: '45%' }}>
+          <Barcode
+            value={barcodeText}
+            height={size.barcodeHeight}
+            showValue={true}
+            options={{
+              width: 1.2,
+              fontSize: 10,
+              displayValue: true,
+              margin: 0
+            }}
+          />
+        </Box>
       </Box>
 
-      {/* Barcode Section */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-        <Barcode 
-          value={barcodeText} 
-          height={size.barcodeHeight}
-          width={1.5}
-          fontSize={12}
-          displayValue={true}
-        />
-      </Box>
+      <Divider sx={{ my: 0.5 }} />
 
-      {/* Housing Details */}
-      <Grid container spacing={0.5} sx={{ flexGrow: 1 }}>
-        <Grid item xs={12}>
-          <Typography 
-            variant="body2" 
-            sx={{ fontSize: size.fontSize, fontWeight: 'bold' }}
-          >
-            Unit ID: {housing.housing_number || `HSG-${housing.id?.substring(0, 6)}`}
+      {/* Compact Details Grid */}
+      <Grid container spacing={0.5} sx={{ mb: 0.5 }}>
+        <Grid item xs={6}>
+          <Typography variant="body2" sx={{ fontSize: size.fontSize }}>
+            <strong>Type:</strong> {getHousingTypeDisplay(housing.cage_type)}
           </Typography>
         </Grid>
-        
-        <Grid item xs={12}>
-          <Typography 
-            variant="body2" 
-            sx={{ fontSize: size.fontSize }}
-          >
-            <strong>Location:</strong> {housing.location}
-          </Typography>
-        </Grid>
-
-        {housing.cage_type && (
-          <Grid item xs={12}>
-            <Typography 
-              variant="body2" 
-              sx={{ fontSize: size.fontSize }}
-            >
-              <strong>Type:</strong> {getHousingTypeDisplay(housing.cage_type)}
+        <Grid item xs={6}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
+            <Typography variant="body2" sx={{ fontSize: size.fontSize }}>
+              <strong>Occupancy:</strong>
             </Typography>
+            <Chip
+              label={`${housing.current_occupancy}/${housing.capacity}`}
+              color={getOccupancyColor()}
+              size="small"
+              sx={{ fontSize: size.fontSize, height: 20 }}
+            />
+          </Box>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Divider sx={{ my: 0.5 }} />
+        </Grid>
+
+        {/* Subjects and Environment in two columns */}
+        {showDetails && subjects.length > 0 && (
+          <Grid item xs={housing.environmental_conditions ? 7 : 12}>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: size.fontSize, fontWeight: 'bold', mb: 0.25 }}
+            >
+              Subjects:
+            </Typography>
+            <Box sx={{
+              display: 'grid',
+              gridTemplateColumns: subjects.length > 3 ? '1fr 1fr' : '1fr',
+              gap: 0.25,
+              fontSize: size.fontSize
+            }}>
+              {subjects.map((subject, index) => (
+                <Typography
+                  key={subject.id || index}
+                  variant="body2"
+                  sx={{
+                    fontSize: size.fontSize,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    lineHeight: 1.2
+                  }}
+                >
+                  • {subject.animal_number || subject.id?.substring(0, 8)} ({subject.sex || '?'})
+                </Typography>
+              ))}
+            </Box>
           </Grid>
         )}
 
-        <Grid item xs={12}>
-          <Typography 
-            variant="body2" 
-            sx={{ fontSize: size.fontSize }}
-          >
-            <strong>Capacity:</strong> {housing.capacity} subjects
-          </Typography>
-        </Grid>
-
-        {showDetails && subjects.length > 0 && (
-          <>
-            <Grid item xs={12}>
-              <Divider sx={{ my: 0.5 }} />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography 
-                variant="body2" 
-                sx={{ fontSize: size.fontSize, fontWeight: 'bold' }}
-              >
-                Current Subjects:
-              </Typography>
-              <Box sx={{ maxHeight: '1in', overflow: 'hidden' }}>
-                {subjects.slice(0, 6).map((subject, index) => (
-                  <Typography 
-                    key={subject.id || index}
-                    variant="body2" 
-                    sx={{ fontSize: size.fontSize }}
-                  >
-                    • {subject.animal_number || subject.id?.substring(0, 8)} 
-                    {subject.species && ` (${subject.species})`}
-                    {subject.sex && ` - ${subject.sex}`}
-                  </Typography>
-                ))}
-                {subjects.length > 6 && (
-                  <Typography 
-                    variant="body2" 
-                    sx={{ fontSize: size.fontSize, fontStyle: 'italic' }}
-                  >
-                    ... and {subjects.length - 6} more
-                  </Typography>
-                )}
-              </Box>
-            </Grid>
-          </>
-        )}
-
-        {housing.environmental_conditions && showDetails && (
-          <>
-            <Grid item xs={12}>
-              <Divider sx={{ my: 0.5 }} />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography 
-                variant="body2" 
-                sx={{ fontSize: size.fontSize }}
-              >
-                <strong>Environment:</strong>
-              </Typography>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  fontSize: size.fontSize, 
-                  fontStyle: 'italic',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {typeof housing.environmental_conditions === 'string' 
-                  ? housing.environmental_conditions 
-                  : JSON.stringify(housing.environmental_conditions).slice(0, 50) + '...'
+        {housing.environmental_conditions &&
+         showDetails &&
+         (typeof housing.environmental_conditions === 'string' ? housing.environmental_conditions.trim() : housing.environmental_conditions) &&
+         (
+          <Grid item xs={5}>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: size.fontSize, fontWeight: 'bold', mb: 0.25 }}
+            >
+              Environment:
+            </Typography>
+            <Box sx={{ fontSize: size.fontSize, lineHeight: 1.3 }}>
+              {(() => {
+                // Parse environmental conditions
+                let envData = housing.environmental_conditions;
+                if (typeof envData === 'string') {
+                  try {
+                    envData = JSON.parse(envData);
+                  } catch {
+                    return (
+                      <Typography variant="body2" sx={{ fontSize: size.fontSize }}>
+                        {envData}
+                      </Typography>
+                    );
+                  }
                 }
-              </Typography>
-            </Grid>
-          </>
+
+                // Format environmental parameters vertically for better space usage
+                return (
+                  <>
+                    {envData.temperature && (
+                      <Typography variant="body2" sx={{ fontSize: size.fontSize, lineHeight: 1.2 }}>
+                        {envData.temperature}
+                      </Typography>
+                    )}
+                    {envData.humidity && (
+                      <Typography variant="body2" sx={{ fontSize: size.fontSize, lineHeight: 1.2 }}>
+                        {envData.humidity} RH
+                      </Typography>
+                    )}
+                    {envData.lighting && (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontSize: size.fontSize,
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {envData.lighting}
+                      </Typography>
+                    )}
+                  </>
+                );
+              })()}
+            </Box>
+          </Grid>
         )}
       </Grid>
 

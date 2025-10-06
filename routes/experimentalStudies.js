@@ -367,4 +367,98 @@ router.get('/stats/summary', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/experimental-studies/:id/animals
+// @desc    Get all animals in a study (across all groups)
+// @access  Private
+router.get('/:id/animals', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const query = `
+      SELECT DISTINCT
+        a.*,
+        eg.group_name,
+        eg.group_number
+      FROM animals a
+      JOIN animal_group_assignments aga ON a.id = aga.animal_id
+      JOIN experimental_groups eg ON aga.group_id = eg.id
+      WHERE eg.study_id = $1
+      ORDER BY a.animal_number
+    `;
+
+    const result = await db.query(query, [id]);
+
+    res.json({
+      animals: result.rows
+    });
+  } catch (err) {
+    console.error('Error loading study animals:', err);
+    res.status(500).json(createErrorResponse('Failed to load study animals'));
+  }
+});
+
+// @route   GET /api/experimental-studies/:id/measurements
+// @desc    Get all measurements for animals in a study
+// @access  Private
+router.get('/:id/measurements', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const query = `
+      SELECT
+        m.*,
+        a.animal_number,
+        eg.group_name,
+        eg.group_number
+      FROM animal_measurements m
+      JOIN animals a ON m.animal_id = a.id
+      JOIN animal_group_assignments aga ON a.id = aga.animal_id
+      JOIN experimental_groups eg ON aga.group_id = eg.id
+      WHERE eg.study_id = $1
+      ORDER BY m.measurement_date DESC, a.animal_number
+    `;
+
+    const result = await db.query(query, [id]);
+
+    res.json({
+      measurements: result.rows
+    });
+  } catch (err) {
+    console.error('Error loading study measurements:', err);
+    res.status(500).json(createErrorResponse('Failed to load study measurements'));
+  }
+});
+
+// @route   GET /api/experimental-studies/:id/samples
+// @desc    Get all biological samples collected from animals in a study
+// @access  Private
+router.get('/:id/samples', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const query = `
+      SELECT
+        bs.*,
+        a.animal_number,
+        eg.group_name,
+        eg.group_number
+      FROM biological_samples bs
+      JOIN animals a ON bs.animal_id = a.id
+      JOIN animal_group_assignments aga ON a.id = aga.animal_id
+      JOIN experimental_groups eg ON aga.group_id = eg.id
+      WHERE eg.study_id = $1
+      ORDER BY bs.collection_date DESC, a.animal_number
+    `;
+
+    const result = await db.query(query, [id]);
+
+    res.json({
+      samples: result.rows
+    });
+  } catch (err) {
+    console.error('Error loading study samples:', err);
+    res.status(500).json(createErrorResponse('Failed to load study samples'));
+  }
+});
+
 module.exports = router;

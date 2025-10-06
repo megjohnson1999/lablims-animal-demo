@@ -44,13 +44,16 @@ import {
   Pets as AnimalIcon,
   Science as SpecimenIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { animalAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useDemo } from '../../context/DemoContext';
 
 const AnimalList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser } = useAuth();
+  const { handleDemoAction } = useDemo();
   
   // State management
   const [animals, setAnimals] = useState([]);
@@ -60,7 +63,8 @@ const AnimalList = () => {
   const [filters, setFilters] = useState({
     species: '',
     status: 'active',
-    housing_location: ''
+    housing_location: '',
+    housing_id: ''
   });
   const [pagination, setPagination] = useState({
     current_page: 1,
@@ -108,7 +112,17 @@ const AnimalList = () => {
         ...filters
       };
 
-      const response = await animalAPI.getAll(`?${new URLSearchParams(params).toString()}`);
+      // Filter out empty string values to prevent URLSearchParams issues
+      const filteredParams = Object.fromEntries(
+        Object.entries(params).filter(([key, value]) => value !== '')
+      );
+
+      console.log('🔍 FILTERS STATE:', filters);
+      console.log('🚀 API call params:', params);
+      console.log('🔧 FILTERED params:', filteredParams);
+      console.log('🚀 URL being called:', `?${new URLSearchParams(filteredParams).toString()}`);
+
+      const response = await animalAPI.getAll(`?${new URLSearchParams(filteredParams).toString()}`);
       setAnimals(response.data.animals);
       setPagination(response.data.pagination);
     } catch (err) {
@@ -129,9 +143,25 @@ const AnimalList = () => {
     }
   }, []);
 
+  // Handle URL query parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const housingParam = urlParams.get('housing');
+    console.log('🔍 URL params:', location.search);
+    console.log('🏠 Housing param from URL:', housingParam);
+
+    if (housingParam) {
+      console.log('🏠 Setting housing_id filter to:', housingParam);
+      setFilters(prev => ({
+        ...prev,
+        housing_id: housingParam
+      }));
+    }
+  }, [location.search]);
+
   useEffect(() => {
     loadAnimals();
-  }, [loadAnimals]);
+  }, [loadAnimals, filters.housing_id]);
 
   useEffect(() => {
     loadStats();
@@ -210,7 +240,7 @@ const AnimalList = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate('/animals/new')}
+            onClick={() => handleDemoAction('add_animal', () => navigate('/animals/new'))}
           >
             Add Animal
           </Button>
@@ -453,7 +483,7 @@ const AnimalList = () => {
                         <Tooltip title="Edit">
                           <IconButton
                             size="small"
-                            onClick={() => handleEditAnimal(animal.id)}
+                            onClick={() => handleDemoAction('edit_animal', () => handleEditAnimal(animal.id))}
                           >
                             <EditIcon />
                           </IconButton>
@@ -464,7 +494,7 @@ const AnimalList = () => {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => handleDeleteAnimal(animal)}
+                            onClick={() => handleDemoAction('delete_animal', () => handleDeleteAnimal(animal))}
                           >
                             <DeleteIcon />
                           </IconButton>

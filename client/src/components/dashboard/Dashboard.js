@@ -29,6 +29,8 @@ import { useAuth } from '../../context/AuthContext';
 import BarcodeSearch from '../common/BarcodeSearch';
 import { inventoryAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import DemoWelcomeCard from './DemoWelcomeCard';
+import WelcomeModal from '../common/WelcomeModal';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -164,14 +166,20 @@ const Dashboard = () => {
 
   return (
     <Box className="dashboard">
+      {/* First-time visitor welcome modal */}
+      <WelcomeModal />
+
       <Typography variant="h4" component="h1" gutterBottom>
         Dashboard
       </Typography>
-      
+
       <Typography variant="h6" gutterBottom>
         Welcome back, {currentUser?.first_name || currentUser?.username}!
       </Typography>
-      
+
+      {/* Demo Welcome Card */}
+      <DemoWelcomeCard stats={stats} />
+
       {/* Quick Barcode Search */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>

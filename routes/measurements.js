@@ -578,15 +578,17 @@ router.get('/study/:studyId/animals-with-history', auth, async (req, res) => {
         CASE
           WHEN recent_measurements.days_since_measurement <= 1 THEN 'recent'
           WHEN recent_measurements.days_since_measurement <= 7 THEN 'week'
+          WHEN recent_measurements.days_since_measurement IS NULL THEN 'unmeasured'
           ELSE 'old'
         END as measurement_recency
       FROM animals a
-      JOIN study_assignments sa ON a.id = sa.animal_id
+      JOIN animal_group_assignments aga ON a.id = aga.animal_id
+      JOIN experimental_groups eg ON aga.group_id = eg.id
       LEFT JOIN (
         SELECT
           am.animal_id,
           MAX(am.measurement_date) as last_measurement_date,
-          CURRENT_DATE - MAX(am.measurement_date) as days_since_measurement,
+          EXTRACT(DAY FROM (CURRENT_DATE - MAX(am.measurement_date))) as days_since_measurement,
           ARRAY_AGG(DISTINCT am.measurement_type) as recent_measurement_types,
           COUNT(*) as measurement_count
         FROM animal_measurements am
@@ -594,8 +596,8 @@ router.get('/study/:studyId/animals-with-history', auth, async (req, res) => {
           AND am.measurement_date >= CURRENT_DATE - INTERVAL '30 days'
         GROUP BY am.animal_id
       ) recent_measurements ON a.id = recent_measurements.animal_id
-      WHERE sa.study_id = $1
-        AND sa.status = 'active'
+      WHERE eg.study_id = $1
+        AND a.status = 'active'
       ORDER BY
         recent_measurements.last_measurement_date DESC NULLS LAST,
         a.animal_number

@@ -1,7 +1,7 @@
 {
-  "name": "animal-lims",
+  "name": "lablims-animal-research",
   "version": "1.0.0",
-  "description": "Web-based Laboratory Information Management System for animal research and specimen tracking",
+  "description": "LabLIMS Animal Research - Web-based Laboratory Information Management System for animal research facilities",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

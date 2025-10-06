@@ -120,7 +120,7 @@ router.get('/:id', auth, async (req, res) => {
     `;
 
     const animalsQuery = `
-      SELECT 
+      SELECT
         aga.*,
         a.animal_number,
         a.species,
@@ -135,25 +135,9 @@ router.get('/:id', auth, async (req, res) => {
       ORDER BY aga.assignment_date DESC
     `;
 
-    const treatmentsQuery = `
-      SELECT *
-      FROM group_treatments
-      WHERE group_id = $1
-      ORDER BY treatment_date DESC
-    `;
-
-    const measurementsQuery = `
-      SELECT *
-      FROM group_measurements
-      WHERE group_id = $1
-      ORDER BY measurement_date DESC
-    `;
-
-    const [groupResult, animalsResult, treatmentsResult, measurementsResult] = await Promise.all([
+    const [groupResult, animalsResult] = await Promise.all([
       db.query(groupQuery, [id]),
-      db.query(animalsQuery, [id]),
-      db.query(treatmentsQuery, [id]),
-      db.query(measurementsQuery, [id])
+      db.query(animalsQuery, [id])
     ]);
 
     if (groupResult.rows.length === 0) {
@@ -162,9 +146,7 @@ router.get('/:id', auth, async (req, res) => {
 
     res.json({
       group: groupResult.rows[0],
-      animals: animalsResult.rows,
-      treatments: treatmentsResult.rows,
-      measurements: measurementsResult.rows
+      animals: animalsResult.rows
     });
   } catch (err) {
     console.error('Error loading experimental group:', err);
@@ -524,6 +506,35 @@ router.post('/:id/measurements', [
   } catch (err) {
     console.error('Error adding measurement record:', err);
     res.status(500).json(createErrorResponse('Failed to add measurement record'));
+  }
+});
+
+// @route   GET /api/groups/:id/animals
+// @desc    Get all animals in a specific group
+// @access  Private
+router.get('/:id/animals', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const query = `
+      SELECT
+        a.*,
+        aga.assignment_date,
+        aga.assigned_by
+      FROM animals a
+      JOIN animal_group_assignments aga ON a.id = aga.animal_id
+      WHERE aga.group_id = $1
+      ORDER BY a.animal_number
+    `;
+
+    const result = await db.query(query, [id]);
+
+    res.json({
+      animals: result.rows
+    });
+  } catch (err) {
+    console.error('Error loading group animals:', err);
+    res.status(500).json(createErrorResponse('Failed to load group animals'));
   }
 });
 

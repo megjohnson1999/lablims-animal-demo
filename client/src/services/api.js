@@ -250,7 +250,11 @@ const housingAPI = {
   delete: (id) => axios.delete(`/api/housing/${id}`),
   assignAnimal: (id, animalId) => axios.put(`/api/housing/${id}/assign-animal`, { animal_id: animalId }),
   removeAnimal: (id, animalId) => axios.put(`/api/housing/${id}/remove-animal`, { animal_id: animalId }),
-  getStats: () => axios.get('/api/housing/stats/summary')
+  getStats: () => axios.get('/api/housing/stats/summary'),
+  // Hierarchy endpoints
+  getHierarchy: () => axios.get('/api/housing/hierarchy'),
+  getBuildings: () => axios.get('/api/housing/buildings'),
+  getRooms: (building) => axios.get(`/api/housing/rooms/${encodeURIComponent(building)}`)
 };
 
 // Studies API - Unified (combines Projects + Experimental Studies)

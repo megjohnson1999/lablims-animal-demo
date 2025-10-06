@@ -19,14 +19,35 @@ ON CONFLICT (username) DO NOTHING;
 -- SAMPLE HOUSING UNITS
 -- ================================================================================
 
--- Create sample housing units
-INSERT INTO housing (id, housing_number, location, cage_type, capacity, current_occupancy, status, environmental_conditions, notes) VALUES
-('a1111111-1111-1111-1111-111111111111', 'A-101', 'Building A, Room 101', 'standard', 4, 2, 'active', 'Temperature: 72°F, Humidity: 45%', 'Standard mouse housing'),
-('a1111111-1111-1111-1111-111111111112', 'A-102', 'Building A, Room 101', 'standard', 4, 0, 'active', 'Temperature: 72°F, Humidity: 45%', 'Available for new arrivals'),
-('a1111111-1111-1111-1111-111111111113', 'A-103', 'Building A, Room 101', 'breeding', 2, 2, 'active', 'Temperature: 72°F, Humidity: 50%', 'Breeding pair housing'),
-('a1111111-1111-1111-1111-111111111114', 'B-201', 'Building B, Room 201', 'standard', 6, 4, 'active', 'Temperature: 68°F, Humidity: 40%', 'Rat housing unit'),
-('a1111111-1111-1111-1111-111111111115', 'B-202', 'Building B, Room 201', 'isolation', 1, 0, 'active', 'Temperature: 72°F, Humidity: 45%', 'Quarantine/isolation unit'),
-('a1111111-1111-1111-1111-111111111116', 'C-301', 'Building C, Room 301', 'rack_system', 20, 8, 'active', 'Temperature: 70°F, Humidity: 50%', 'Large capacity mouse rack')
+-- Create sample housing units with hierarchical structure
+INSERT INTO housing (id, housing_number, building, room, rack, cage, cage_type, capacity, current_occupancy, status, environmental_conditions, notes) VALUES
+-- Animal Research Building - Room 101 - Rack A (Mouse Housing)
+('a1111111-1111-1111-1111-111111111111', 'ARB-101-A-001', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 1', 'standard', 4, 2, 'active', '{"temperature": "72°F", "humidity": "45%", "lighting": "12:12 LD cycle"}', 'Standard mouse housing - C57BL/6J strain'),
+('a1111111-1111-1111-1111-111111111112', 'ARB-101-A-002', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 2', 'standard', 4, 0, 'active', '{"temperature": "72°F", "humidity": "45%", "lighting": "12:12 LD cycle"}', 'Available for new arrivals'),
+('a1111111-1111-1111-1111-111111111113', 'ARB-101-A-003', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 3', 'standard', 4, 4, 'active', '{"temperature": "72°F", "humidity": "45%", "lighting": "12:12 LD cycle"}', 'BALB/c mice for immunology studies'),
+('a1111111-1111-1111-1111-111111111114', 'ARB-101-A-004', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 4', 'standard', 4, 1, 'active', '{"temperature": "72°F", "humidity": "45%", "lighting": "12:12 LD cycle"}', 'Transgenic FVB/NJ strain'),
+
+-- Animal Research Building - Room 101 - Rack B (More Mouse Housing)
+('a1111111-1111-1111-1111-111111111115', 'ARB-101-B-001', 'Animal Research Building', 'Room 101', 'Rack B', 'Cage 1', 'standard', 4, 3, 'active', '{"temperature": "72°F", "humidity": "45%", "lighting": "12:12 LD cycle"}', 'NOD/SCID immunodeficient mice'),
+('a1111111-1111-1111-1111-111111111116', 'ARB-101-B-002', 'Animal Research Building', 'Room 101', 'Rack B', 'Cage 2', 'standard', 4, 0, 'active', '{"temperature": "72°F", "humidity": "45%", "lighting": "12:12 LD cycle"}', 'Reserve housing for new arrivals'),
+
+-- Vivarium 1 - Room 205 - Breeding Area
+('a1111111-1111-1111-1111-111111111117', 'VIV1-205-BR-001', 'Vivarium 1', 'Room 205', 'Breeding Rack', 'Cage 1', 'breeding', 2, 2, 'active', '{"temperature": "72°F", "humidity": "50%", "lighting": "14:10 LD cycle"}', 'C57BL/6J breeding pair - proven breeders'),
+('a1111111-1111-1111-1111-111111111118', 'VIV1-205-BR-002', 'Vivarium 1', 'Room 205', 'Breeding Rack', 'Cage 2', 'breeding', 2, 0, 'active', '{"temperature": "72°F", "humidity": "50%", "lighting": "14:10 LD cycle"}', 'Available for new breeding setup'),
+
+-- Vivarium 1 - Room 301 - Rat Housing
+('a1111111-1111-1111-1111-111111111119', 'VIV1-301-R1-001', 'Vivarium 1', 'Room 301', 'Rack 1', 'Cage 1', 'standard', 6, 4, 'active', '{"temperature": "68°F", "humidity": "40%", "lighting": "12:12 LD cycle"}', 'Sprague Dawley rats for metabolic studies'),
+('a1111111-1111-1111-1111-111111111120', 'VIV1-301-R1-002', 'Vivarium 1', 'Room 301', 'Rack 1', 'Cage 2', 'standard', 6, 2, 'active', '{"temperature": "68°F", "humidity": "40%", "lighting": "12:12 LD cycle"}', 'Wistar rats for behavioral studies'),
+
+-- Quarantine Building - Isolation Room
+('a1111111-1111-1111-1111-111111111121', 'QAR-ISO-U1-001', 'Quarantine Building', 'Isolation Room', 'Unit 1', 'Single', 'isolation', 1, 0, 'active', '{"temperature": "72°F", "humidity": "45%", "lighting": "12:12 LD cycle", "air_changes": "15/hour"}', 'Isolation unit for quarantine procedures'),
+('a1111111-1111-1111-1111-111111111122', 'QAR-ISO-U2-001', 'Quarantine Building', 'Isolation Room', 'Unit 2', 'Single', 'isolation', 1, 1, 'active', '{"temperature": "72°F", "humidity": "45%", "lighting": "12:12 LD cycle", "air_changes": "15/hour"}', 'Currently housing NOD/SCID mouse in quarantine'),
+
+-- Research Building - Surgery Suite (Mobile Housing)
+('a1111111-1111-1111-1111-111111111123', 'RES-SUR-MOB-001', 'Research Building', 'Surgery Suite', 'Mobile Cart', 'Recovery 1', 'post_surgical', 2, 0, 'active', '{"temperature": "74°F", "humidity": "45%", "lighting": "dim", "monitoring": "continuous"}', 'Post-surgical recovery housing with monitoring'),
+
+-- Large Rack System for High-Throughput Studies
+('a1111111-1111-1111-1111-111111111124', 'ARB-102-RS-001', 'Animal Research Building', 'Room 102', 'Rack System A', 'Cages 1-20', 'rack_system', 20, 8, 'active', '{"temperature": "70°F", "humidity": "50%", "lighting": "12:12 LD cycle", "automated_watering": true}', 'High-capacity mouse rack for large studies')
 ON CONFLICT (id) DO NOTHING;
 
 -- ================================================================================

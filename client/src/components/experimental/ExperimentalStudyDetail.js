@@ -25,10 +25,12 @@ import {
   Add as AddIcon,
   Group as GroupIcon,
   Science as ScienceIcon,
-  Visibility as ViewIcon
+  Visibility as ViewIcon,
+  Timeline as TimelineIcon
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { experimentalStudiesAPI } from '../../services/api';
+import StudyDataAnalysis from './StudyDataAnalysis';
 
 const ExperimentalStudyDetail = () => {
   const navigate = useNavigate();
@@ -210,7 +212,8 @@ const ExperimentalStudyDetail = () => {
       {/* Tabs for detailed information */}
       <Box sx={{ mt: 3 }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
-          <Tab label="Experimental Groups" />
+          <Tab label="Experimental Groups" icon={<GroupIcon />} iconPosition="start" />
+          <Tab label="Data & Analysis" icon={<TimelineIcon />} iconPosition="start" />
           <Tab label="Objectives" />
           <Tab label="Study Design" />
         </Tabs>
@@ -300,8 +303,15 @@ const ExperimentalStudyDetail = () => {
           </Paper>
         )}
 
-        {/* Objectives Tab */}
+        {/* Data & Analysis Tab */}
         {activeTab === 1 && (
+          <Paper sx={{ mt: 2, p: 3 }}>
+            <StudyDataAnalysis studyId={id} studyInfo={study} />
+          </Paper>
+        )}
+
+        {/* Objectives Tab */}
+        {activeTab === 2 && (
           <Paper sx={{ mt: 2, p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Study Objectives
@@ -313,7 +323,7 @@ const ExperimentalStudyDetail = () => {
         )}
 
         {/* Study Design Tab */}
-        {activeTab === 2 && (
+        {activeTab === 3 && (
           <Paper sx={{ mt: 2, p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Study Design

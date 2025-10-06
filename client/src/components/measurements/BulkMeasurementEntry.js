@@ -33,16 +33,10 @@ import {
   useMediaQuery
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
   Save as SaveIcon,
   Clear as ClearIcon,
-  Download as DownloadIcon,
-  Upload as UploadIcon,
   CheckCircle as SuccessIcon,
-  Error as ErrorIcon,
-  ContentCopy as CopyIcon,
-  Refresh as RefreshIcon
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -81,7 +75,9 @@ const BulkMeasurementEntry = () => {
 
   // Search and filters
   const [animalSearch, setAnimalSearch] = useState('');
-  const [animalSelection, setAnimalSelection] = useState('recent'); // 'recent', 'all', 'custom'
+  const [filterByGroup, setFilterByGroup] = useState('all');
+  const [filterByStrain, setFilterByStrain] = useState('all');
+  const [filterBySex, setFilterBySex] = useState('all');
 
   useEffect(() => {
     loadInitialData();
@@ -169,60 +165,41 @@ const BulkMeasurementEntry = () => {
     setStep('animal-selection');
   };
 
-  const selectAnimalsAndContinue = () => {
-    let animalsToSelect = [];
+  // Apply filters and update selected animals
+  useEffect(() => {
+    if (animals.length > 0) {
+      let filtered = [...animals];
 
-    if (animalSelection === 'recent') {
-      animalsToSelect = animals.filter(a => a.measurement_recency === 'recent' || a.measurement_recency === 'week');
-    } else if (animalSelection === 'all') {
-      animalsToSelect = animals;
-    } else if (animalSelection === 'unmeasured') {
-      animalsToSelect = animals.filter(a => a.measurement_recency === 'unmeasured');
-    } else if (animalSelection === 'by_strain') {
-      // Get unique strains and auto-select all animals from first strain
-      const strains = [...new Set(animals.map(a => a.strain).filter(Boolean))];
-      if (strains.length > 0) {
-        animalsToSelect = animals.filter(a => a.strain === strains[0]);
+      // Apply group filter
+      if (filterByGroup !== 'all') {
+        filtered = filtered.filter(a => a.group_name === filterByGroup);
       }
-    } else {
-      // Custom selection - use currently selected animals
-      animalsToSelect = selectedAnimals;
-    }
 
-    if (animalSearch) {
-      const search = animalSearch.toLowerCase();
-      animalsToSelect = animalsToSelect.filter(animal =>
-        animal.animal_number?.toString().includes(search) ||
-        animal.strain?.toLowerCase().includes(search) ||
-        animal.genotype?.toLowerCase().includes(search)
-      );
-    }
+      // Apply strain filter
+      if (filterByStrain !== 'all') {
+        filtered = filtered.filter(a => a.strain === filterByStrain);
+      }
 
-    setSelectedAnimals(animalsToSelect.slice(0, 50)); // Limit to 50 for performance
+      // Apply sex filter
+      if (filterBySex !== 'all') {
+        filtered = filtered.filter(a => a.sex === filterBySex);
+      }
+
+      // Apply search
+      if (animalSearch) {
+        const search = animalSearch.toLowerCase();
+        filtered = filtered.filter(animal =>
+          animal.animal_number?.toString().includes(search)
+        );
+      }
+
+      setSelectedAnimals(filtered);
+    }
+  }, [animals, filterByGroup, filterByStrain, filterBySex, animalSearch]);
+
+  const selectAnimalsAndContinue = () => {
     setStep('measurement-entry');
   };
-
-  // Auto-select animals when selection type changes (except for custom)
-  useEffect(() => {
-    if (animalSelection !== 'custom' && animals.length > 0) {
-      let autoSelected = [];
-
-      if (animalSelection === 'recent') {
-        autoSelected = animals.filter(a => a.measurement_recency === 'recent' || a.measurement_recency === 'week');
-      } else if (animalSelection === 'all') {
-        autoSelected = animals;
-      } else if (animalSelection === 'unmeasured') {
-        autoSelected = animals.filter(a => a.measurement_recency === 'unmeasured');
-      } else if (animalSelection === 'by_strain') {
-        const strains = [...new Set(animals.map(a => a.strain).filter(Boolean))];
-        if (strains.length > 0) {
-          autoSelected = animals.filter(a => a.strain === strains[0]);
-        }
-      }
-
-      setSelectedAnimals(autoSelected.slice(0, 50));
-    }
-  }, [animalSelection, animals]);
 
   const goBackToStudySelection = () => {
     setStep('study-selection');
@@ -410,32 +387,13 @@ const BulkMeasurementEntry = () => {
     }
   };
 
-  const toggleAnimalSelection = (animal) => {
-    const isSelected = selectedAnimals.some(a => a.id === animal.id);
-    if (isSelected) {
-      setSelectedAnimals(selectedAnimals.filter(a => a.id !== animal.id));
-    } else {
-      setSelectedAnimals([...selectedAnimals, animal]);
-    }
+  const clearFilters = () => {
+    setFilterByGroup('all');
+    setFilterByStrain('all');
+    setFilterBySex('all');
+    setAnimalSearch('');
   };
 
-  const selectAllAnimals = () => {
-    setSelectedAnimals(animals.slice(0, 50));
-  };
-
-  const clearAnimalSelection = () => {
-    setSelectedAnimals([]);
-  };
-
-  const selectByStrain = (strain) => {
-    const strainAnimals = animals.filter(a => a.strain === strain);
-    setSelectedAnimals(strainAnimals.slice(0, 50));
-  };
-
-  const selectByRecency = (recency) => {
-    const recencyAnimals = animals.filter(a => a.measurement_recency === recency);
-    setSelectedAnimals(recencyAnimals.slice(0, 50));
-  };
 
   if (loading) {
     return (
@@ -470,11 +428,20 @@ const BulkMeasurementEntry = () => {
   // Study Selection Screen
   const renderStudySelection = () => (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Select Study for Measurement Entry
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Measurement Entry
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Select a study to record measurements for your animals.
+        </Typography>
+      </Box>
+
+      <Typography variant="h6" gutterBottom>
+        Select Study
       </Typography>
-      <Typography variant="body1" color="text.secondary" paragraph>
-        Choose the study you want to record measurements for. This will show you recent measurement sessions and available animals.
+      <Typography variant="body2" color="text.secondary" paragraph>
+        Choose the study you want to record measurements for. You'll be able to select animals and enter measurements in the next steps.
       </Typography>
 
       <Grid container spacing={3}>
@@ -521,18 +488,162 @@ const BulkMeasurementEntry = () => {
   );
 
   // Animal Selection Screen
-  const renderAnimalSelection = () => (
+  const renderAnimalSelection = () => {
+    // Get unique values for filters
+    const groups = ['all', ...new Set(animals.map(a => a.group_name).filter(Boolean))];
+    const strains = ['all', ...new Set(animals.map(a => a.strain).filter(Boolean))];
+    const sexes = ['all', ...new Set(animals.map(a => a.sex).filter(Boolean))];
+
+    return (
     <Box>
       <Typography variant="h4" gutterBottom>
         Select Animals - {selectedStudyData?.study_name}
       </Typography>
       <Typography variant="body1" color="text.secondary" paragraph>
-        Choose which animals to measure. You can continue from a previous session or select animals manually.
+        Filter and select animals to measure. By default, all animals in the study are selected.
       </Typography>
+
+      {/* Filter Controls */}
+      <Card sx={{ mb: 3 }}>
+        <CardHeader title="Filter Animals" />
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={2.5}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Group</InputLabel>
+                <Select
+                  value={filterByGroup}
+                  onChange={(e) => setFilterByGroup(e.target.value)}
+                  label="Group"
+                >
+                  {groups.map(group => (
+                    <MenuItem key={group} value={group}>
+                      {group === 'all' ? 'All Groups' : group}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2.5}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Strain</InputLabel>
+                <Select
+                  value={filterByStrain}
+                  onChange={(e) => setFilterByStrain(e.target.value)}
+                  label="Strain"
+                >
+                  {strains.map(strain => (
+                    <MenuItem key={strain} value={strain}>
+                      {strain === 'all' ? 'All Strains' : strain}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Sex</InputLabel>
+                <Select
+                  value={filterBySex}
+                  onChange={(e) => setFilterBySex(e.target.value)}
+                  label="Sex"
+                >
+                  {sexes.map(sex => (
+                    <MenuItem key={sex} value={sex}>
+                      {sex === 'all' ? 'All' : sex}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search Animal #"
+                value={animalSearch}
+                onChange={(e) => setAnimalSearch(e.target.value)}
+                placeholder="e.g., 12345"
+              />
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={clearFilters}
+                size="small"
+              >
+                Clear Filters
+              </Button>
+            </Grid>
+          </Grid>
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              {selectedAnimals.length} animal{selectedAnimals.length !== 1 ? 's' : ''} selected
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={selectAnimalsAndContinue}
+              disabled={selectedAnimals.length === 0}
+            >
+              Continue with {selectedAnimals.length} Animal{selectedAnimals.length !== 1 ? 's' : ''} →
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Animal List Preview */}
+      {selectedAnimals.length > 0 && (
+        <Card>
+          <CardHeader
+            title={`Filtered Animals (${selectedAnimals.length})`}
+            subheader="Preview of animals that will be included in measurement entry"
+          />
+          <CardContent>
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Animal #</TableCell>
+                    <TableCell>Group</TableCell>
+                    <TableCell>Strain</TableCell>
+                    <TableCell>Sex</TableCell>
+                    <TableCell>Last Measured</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {selectedAnimals.map((animal) => (
+                    <TableRow key={animal.id}>
+                      <TableCell>#{animal.animal_number}</TableCell>
+                      <TableCell>{animal.group_name || '-'}</TableCell>
+                      <TableCell>{animal.strain || '-'}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={animal.sex || '?'}
+                          size="small"
+                          color={animal.sex === 'M' ? 'primary' : 'secondary'}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {animal.last_measurement_date ? (
+                          `${animal.days_since_measurement} days ago`
+                        ) : (
+                          'Never measured'
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Sessions */}
       {recentSessions.length > 0 && (
-        <Card sx={{ mb: 3 }}>
+        <Card sx={{ mt: 3 }}>
           <CardHeader title="Recent Measurement Sessions" />
           <CardContent>
             <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -571,235 +682,28 @@ const BulkMeasurementEntry = () => {
         </Card>
       )}
 
-      {/* Animal Selection Options */}
-      <Card sx={{ mb: 3 }}>
-        <CardHeader title="Select Animals for Measurement" />
-        <CardContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Selection Type</InputLabel>
-                <Select
-                  value={animalSelection}
-                  onChange={(e) => setAnimalSelection(e.target.value)}
-                >
-                  <MenuItem value="recent">Recently Measured (Auto-select)</MenuItem>
-                  <MenuItem value="all">All Study Animals (Auto-select)</MenuItem>
-                  <MenuItem value="unmeasured">Never Measured (Auto-select)</MenuItem>
-                  <MenuItem value="by_strain">By Strain (Auto-select)</MenuItem>
-                  <MenuItem value="custom">Manual Selection</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <TextField
-                fullWidth
-                label="Search Animals"
-                value={animalSearch}
-                onChange={(e) => setAnimalSearch(e.target.value)}
-                placeholder="Animal #, strain..."
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                {animalSelection === 'custom' && (
-                  <>
-                    <Button variant="outlined" onClick={selectAllAnimals} size="small">
-                      Select All
-                    </Button>
-                    <Button variant="outlined" onClick={clearAnimalSelection} size="small">
-                      Clear All
-                    </Button>
-                  </>
-                )}
-                <Chip
-                  label={`${selectedAnimals.length} animals selected`}
-                  color={selectedAnimals.length > 0 ? 'primary' : 'default'}
-                  variant="outlined"
-                />
-                <Button
-                  variant="contained"
-                  onClick={selectAnimalsAndContinue}
-                  disabled={selectedAnimals.length === 0}
-                  size="large"
-                >
-                  Continue with {selectedAnimals.length} Animals →
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Quick Selection Actions */}
-      {animals.length > 0 && animalSelection === 'custom' && (
-        <Card sx={{ mb: 2 }}>
-          <CardContent>
-            <Typography variant="subtitle2" gutterBottom>
-              Quick Selection Actions:
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-              {/* Recency-based quick selections */}
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => selectByRecency('recent')}
-                color="success"
-              >
-                Recently Measured ({animals.filter(a => a.measurement_recency === 'recent').length})
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => selectByRecency('week')}
-                color="warning"
-              >
-                This Week ({animals.filter(a => a.measurement_recency === 'week').length})
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => selectByRecency('unmeasured')}
-              >
-                Never Measured ({animals.filter(a => a.measurement_recency === 'unmeasured').length})
-              </Button>
-            </Box>
-
-            {/* Strain-based quick selections */}
-            {(() => {
-              const strains = [...new Set(animals.map(a => a.strain).filter(Boolean))];
-              if (strains.length > 1) {
-                return (
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <Typography variant="caption" sx={{ alignSelf: 'center', mr: 1 }}>
-                      By Strain:
-                    </Typography>
-                    {strains.slice(0, 5).map(strain => (
-                      <Button
-                        key={strain}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => selectByStrain(strain)}
-                      >
-                        {strain} ({animals.filter(a => a.strain === strain).length})
-                      </Button>
-                    ))}
-                  </Box>
-                );
-              }
-              return null;
-            })()}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Animal List */}
-      {animals.length > 0 && (
-        <Card>
-          <CardHeader
-            title={`Available Animals (${animals.length})`}
-            subheader={animalSelection !== 'custom' ?
-              `Auto-selected ${selectedAnimals.length} animals based on "${animalSelection}" criteria` :
-              `${selectedAnimals.length} manually selected`
-            }
-          />
-          <CardContent>
-            <TableContainer sx={{ maxHeight: 400 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox">Select</TableCell>
-                    <TableCell>Animal #</TableCell>
-                    <TableCell>Strain</TableCell>
-                    <TableCell>Sex</TableCell>
-                    <TableCell>Last Measured</TableCell>
-                    <TableCell>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {animals
-                    .filter(animal => {
-                      if (!animalSearch) return true;
-                      const search = animalSearch.toLowerCase();
-                      return animal.animal_number?.toString().includes(search) ||
-                             animal.strain?.toLowerCase().includes(search) ||
-                             animal.genotype?.toLowerCase().includes(search);
-                    })
-                    .map((animal) => {
-                      const isSelected = selectedAnimals.some(a => a.id === animal.id);
-                      return (
-                        <TableRow
-                          key={animal.id}
-                          hover
-                          selected={isSelected}
-                          onClick={() => animalSelection === 'custom' && toggleAnimalSelection(animal)}
-                          sx={{ cursor: animalSelection === 'custom' ? 'pointer' : 'default' }}
-                        >
-                          <TableCell padding="checkbox">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleAnimalSelection(animal)}
-                            />
-                          </TableCell>
-                          <TableCell>#{animal.animal_number}</TableCell>
-                          <TableCell>{animal.strain || '-'}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={animal.sex || '?'}
-                              size="small"
-                              color={animal.sex === 'M' ? 'primary' : 'secondary'}
-                              variant="outlined"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {animal.last_measurement_date ? (
-                              `${animal.days_since_measurement} days ago`
-                            ) : (
-                              'Never'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={animal.measurement_recency === 'recent' ? 'Recent' :
-                                     animal.measurement_recency === 'week' ? 'This Week' :
-                                     animal.measurement_recency === 'old' ? 'Old' : 'Unmeasured'}
-                              size="small"
-                              color={animal.measurement_recency === 'recent' ? 'success' :
-                                     animal.measurement_recency === 'week' ? 'warning' : 'default'}
-                              variant="outlined"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
-      )}
-
       <Box sx={{ mt: 2 }}>
         <Button onClick={goBackToStudySelection} startIcon={<ClearIcon />}>
           Back to Study Selection
         </Button>
       </Box>
     </Box>
-  );
+    );
+  };
 
   // Measurement Entry Screen
-  const renderMeasurementEntry = () => (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Measurement Entry - {selectedStudyData?.study_name}
-      </Typography>
-      <Typography variant="body1" color="text.secondary" paragraph>
-        Recording measurements for {selectedAnimals.length} animals. Enter data and click Save when complete.
-      </Typography>
+  const renderMeasurementEntry = () => {
+    return (
+      <Box>
+        <Typography variant="h4" gutterBottom>
+          Measurement Entry - {selectedStudyData?.study_name}
+        </Typography>
+        <Typography variant="body1" color="text.secondary" paragraph>
+          Recording measurements for {selectedAnimals.length} animals. Enter data and click Save when complete.
+        </Typography>
 
-      {/* Configuration */}
-      <Card sx={{ mb: 3 }}>
+        {/* Configuration */}
+        <Card sx={{ mb: 3 }}>
         <CardHeader title="Measurement Settings" />
         <CardContent>
           <Grid container spacing={3}>
@@ -1004,13 +908,14 @@ const BulkMeasurementEntry = () => {
         </Alert>
       )}
 
-      <Box sx={{ mt: 2 }}>
-        <Button onClick={goBackToAnimalSelection} startIcon={<ClearIcon />}>
-          Back to Animal Selection
-        </Button>
+        <Box sx={{ mt: 2 }}>
+          <Button onClick={goBackToAnimalSelection} startIcon={<ClearIcon />}>
+            Back to Animal Selection
+          </Button>
+        </Box>
       </Box>
-    </Box>
-  );
+    );
+  };
 
   return (
     <Box>

@@ -1,23 +1,23 @@
 -- Basic sample data for animal claiming system testing
 -- Only creates animals and housing - avoids complex dependencies
 
--- Create basic housing units (individual cages) if they don't exist
-INSERT INTO housing (id, housing_number, location, cage_type, capacity, current_occupancy, status) VALUES
--- Mouse cages in Room 101
-(gen_random_uuid(), 'Cage-A101-01', 'Room 101, Rack A', 'mouse_cage', 5, 2, 'active'),
-(gen_random_uuid(), 'Cage-A101-02', 'Room 101, Rack A', 'mouse_cage', 5, 0, 'active'),
-(gen_random_uuid(), 'Cage-A101-03', 'Room 101, Rack A', 'mouse_cage', 5, 4, 'active'),
-(gen_random_uuid(), 'Cage-A101-04', 'Room 101, Rack A', 'mouse_cage', 5, 1, 'active'),
--- Breeding cages in Room 102
-(gen_random_uuid(), 'Cage-A102-B1', 'Room 102, Breeding Area', 'breeding_cage', 3, 2, 'active'),
-(gen_random_uuid(), 'Cage-A102-B2', 'Room 102, Breeding Area', 'breeding_cage', 3, 0, 'active'),
--- Rat cages in Room 201
-(gen_random_uuid(), 'Cage-B201-01', 'Room 201, Rack B', 'rat_cage', 2, 1, 'active'),
-(gen_random_uuid(), 'Cage-B201-02', 'Room 201, Rack B', 'rat_cage', 2, 2, 'active'),
-(gen_random_uuid(), 'Cage-B201-03', 'Room 201, Rack B', 'rat_cage', 2, 0, 'active'),
--- Isolation cages
-(gen_random_uuid(), 'Cage-ISO-01', 'Room 105, Isolation Unit', 'isolation_cage', 1, 0, 'active'),
-(gen_random_uuid(), 'Cage-ISO-02', 'Room 105, Isolation Unit', 'isolation_cage', 1, 1, 'active')
+-- Create basic housing units with hierarchical structure
+INSERT INTO housing (id, housing_number, building, room, rack, cage, cage_type, capacity, current_occupancy, status) VALUES
+-- Mouse cages in Animal Research Building - Room 101
+(gen_random_uuid(), 'ARB-101-A-01', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 1', 'standard', 5, 2, 'active'),
+(gen_random_uuid(), 'ARB-101-A-02', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 2', 'standard', 5, 0, 'active'),
+(gen_random_uuid(), 'ARB-101-A-03', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 3', 'standard', 5, 4, 'active'),
+(gen_random_uuid(), 'ARB-101-A-04', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 4', 'standard', 5, 1, 'active'),
+-- Breeding cages in Animal Research Building - Room 102
+(gen_random_uuid(), 'ARB-102-BR-1', 'Animal Research Building', 'Room 102', 'Breeding Area', 'Cage 1', 'breeding', 3, 2, 'active'),
+(gen_random_uuid(), 'ARB-102-BR-2', 'Animal Research Building', 'Room 102', 'Breeding Area', 'Cage 2', 'breeding', 3, 0, 'active'),
+-- Rat cages in Vivarium 1 - Room 201
+(gen_random_uuid(), 'VIV1-201-B-01', 'Vivarium 1', 'Room 201', 'Rack B', 'Cage 1', 'standard', 2, 1, 'active'),
+(gen_random_uuid(), 'VIV1-201-B-02', 'Vivarium 1', 'Room 201', 'Rack B', 'Cage 2', 'standard', 2, 2, 'active'),
+(gen_random_uuid(), 'VIV1-201-B-03', 'Vivarium 1', 'Room 201', 'Rack B', 'Cage 3', 'standard', 2, 0, 'active'),
+-- Isolation cages in Quarantine Building
+(gen_random_uuid(), 'QAR-ISO-U1', 'Quarantine Building', 'Isolation Room', 'Unit 1', 'Single', 'isolation', 1, 0, 'active'),
+(gen_random_uuid(), 'QAR-ISO-U2', 'Quarantine Building', 'Isolation Room', 'Unit 2', 'Single', 'isolation', 1, 1, 'active')
 ON CONFLICT DO NOTHING;
 
 -- Create sample animals with different availability statuses

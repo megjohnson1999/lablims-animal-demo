@@ -13,13 +13,14 @@ const { createErrorResponse } = require('../utils/errorHandling');
 // @access  Private (all roles)
 router.get('/', auth, async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 50, 
-      search = '', 
-      species, 
+    const {
+      page = 1,
+      limit = 50,
+      search = '',
+      species,
       status = 'active',
       housing_location,
+      housing_id,
       sort = 'animal_number',
       order = 'ASC'
     } = req.query;
@@ -59,6 +60,13 @@ router.get('/', auth, async (req, res) => {
       paramCount++;
       whereClause += ` AND h.location ILIKE $${paramCount}`;
       values.push(`%${housing_location}%`);
+    }
+
+    // Filter by housing ID
+    if (housing_id && housing_id.trim && housing_id.trim() !== '') {
+      paramCount++;
+      whereClause += ` AND a.housing_id = $${paramCount}`;
+      values.push(housing_id.trim());
     }
 
     // Validate sort column
@@ -302,9 +310,13 @@ router.get('/:id/weights', auth, async (req, res) => {
     const { id } = req.params;
     
     const query = `
-      SELECT 
+      SELECT
         w.*,
-        EXTRACT(DAYS FROM (CURRENT_DATE - w.measurement_date)) as days_ago
+        CASE
+          WHEN w.measurement_date IS NOT NULL
+          THEN (CURRENT_DATE - w.measurement_date)
+          ELSE NULL
+        END as days_ago
       FROM animal_weights w
       WHERE w.animal_id = $1
       ORDER BY w.measurement_date DESC
@@ -374,9 +386,13 @@ router.get('/:id/observations', auth, async (req, res) => {
     const { limit = 20 } = req.query;
     
     const query = `
-      SELECT 
+      SELECT
         o.*,
-        EXTRACT(DAYS FROM (CURRENT_DATE - o.observation_date)) as days_ago
+        CASE
+          WHEN o.observation_date IS NOT NULL
+          THEN (CURRENT_DATE - o.observation_date)
+          ELSE NULL
+        END as days_ago
       FROM animal_observations o
       WHERE o.animal_id = $1
       ORDER BY o.observation_date DESC, o.created_at DESC

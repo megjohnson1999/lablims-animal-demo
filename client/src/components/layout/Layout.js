@@ -49,6 +49,7 @@ import { useAuth } from '../../context/AuthContext';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import { useKeyboardShortcutsHelp } from '../common/KeyboardShortcutsHelp';
 import NotificationBell from '../notifications/NotificationBell';
+import DemoBanner from '../common/DemoBanner';
 
 const drawerWidth = 240;
 
@@ -106,7 +107,6 @@ const Layout = () => {
         { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
         { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
         { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
-        { text: 'Animal Requests', icon: <RequestIcon />, path: '/animal-requests' },
         ...(isFacilityManager ? [
           { text: 'Facility Manager', icon: <AdminIcon />, path: '/facility-manager' }
         ] : [])
@@ -117,24 +117,9 @@ const Layout = () => {
       items: [
         { text: 'Studies', icon: <StudyIcon />, path: '/studies' },
         { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
-        { text: 'Bulk Measurements', icon: <MeasurementIcon />, path: '/bulk-measurements' },
-        { text: 'Biological Samples', icon: <ScienceIcon />, path: '/biological-samples' }
+        { text: 'Measurements', icon: <MeasurementIcon />, path: '/bulk-measurements' }
       ]
-    },
-    {
-      title: 'Lab Infrastructure',
-      items: [
-        { text: 'Procedures', icon: <ProtocolIcon />, path: '/procedures' },
-        { text: 'Inventory', icon: <InventoryIcon />, path: '/inventory' },
-        { text: 'Labels', icon: <LabelIcon />, path: '/labels' }
-      ]
-    },
-    ...(canManageUsers ? [{
-      title: 'Administration',
-      items: [
-        { text: 'User Management', icon: <PeopleIcon />, path: '/admin/users' }
-      ]
-    }] : [])
+    }
   ];
 
   const drawer = (
@@ -207,7 +192,7 @@ const Layout = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Animal Research LIMS
+            LabLIMS Animal Research
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -245,12 +230,6 @@ const Layout = () => {
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
           >
-            <MenuItem onClick={handleSettings}>
-              <ListItemIcon>
-                <SettingsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Settings</ListItemText>
-            </MenuItem>
             <MenuItem onClick={handleShowHelp}>
               <ListItemIcon>
                 <HelpIcon fontSize="small" />
@@ -303,7 +282,8 @@ const Layout = () => {
         sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
       >
         <Toolbar />
-        <Container maxWidth="xl">
+        <DemoBanner demoType="animal" />
+        <Container maxWidth="xl" sx={{ mt: 2 }}>
           <Outlet />
         </Container>
       </Box>

@@ -55,7 +55,8 @@ import {
   ExperimentalStudiesList, 
   ExperimentalStudyForm, 
   ExperimentalStudyDetail,
-  ExperimentalGroupsList 
+  ExperimentalGroupsList,
+  ExperimentalGroupDetail
 } from './components/experimental';
 
 // Inventory Components
@@ -89,6 +90,10 @@ import UserManagement from './components/admin/UserManagement';
 // Context
 import { useAuth } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
+import { DemoProvider } from './context/DemoContext';
+
+// Demo Components
+import DemoContactModal from './components/common/DemoContactModal';
 
 const theme = createTheme({
   palette: {
@@ -175,8 +180,10 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LoadingProvider>
-        <ToastContainer position="top-right" autoClose={5000} />
+      <DemoProvider>
+        <LoadingProvider>
+          <DemoContactModal />
+          <ToastContainer position="top-right" autoClose={5000} />
         <Routes>
         <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
@@ -241,6 +248,7 @@ function App() {
           {/* Groups Routes (Experimental Groups) */}
           <Route path="groups">
             <Route index element={<ExperimentalGroupsList />} />
+            <Route path=":id" element={<ExperimentalGroupDetail />} />
           </Route>
           
           
@@ -284,7 +292,8 @@ function App() {
             console.error('Password change failed:', error);
           }}
         />
-      </LoadingProvider>
+        </LoadingProvider>
+      </DemoProvider>
     </ThemeProvider>
   );
 }
