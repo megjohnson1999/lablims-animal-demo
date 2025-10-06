@@ -884,6 +884,62 @@ app.post('/api/admin/deploy-full-schema', async (req, res) => {
   }
 });
 
+// Admin endpoint to load simple demo data
+app.post('/api/admin/load-demo-simple', async (req, res) => {
+  try {
+    const demoSQL = `
+-- Housing units
+INSERT INTO housing (id, location, building, room, rack, cage, cage_type, capacity, current_occupancy, status, environmental_conditions) VALUES
+('a1111111-1111-1111-1111-111111111111', 'ARB-101-A-001', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 1', 'standard', 4, 2, 'active', '{"temperature": "72°F", "humidity": "45%"}'),
+('a1111111-1111-1111-1111-111111111112', 'ARB-101-A-002', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 2', 'standard', 4, 2, 'active', '{"temperature": "72°F", "humidity": "45%"}'),
+('a1111111-1111-1111-1111-111111111113', 'ARB-101-A-003', 'Animal Research Building', 'Room 101', 'Rack A', 'Cage 3', 'standard', 4, 3, 'active', '{"temperature": "72°F", "humidity": "45%"}'),
+('a1111111-1111-1111-1111-111111111114', 'ARB-101-B-001', 'Animal Research Building', 'Room 101', 'Rack B', 'Cage 1', 'standard', 4, 2, 'active', '{"temperature": "72°F", "humidity": "45%"}'),
+('a1111111-1111-1111-1111-111111111115', 'VIV1-205-BR-001', 'Vivarium 1', 'Room 205', 'Breeding Rack', 'Cage 1', 'breeding', 2, 2, 'active', '{"temperature": "72°F", "humidity": "50%"}'),
+('a1111111-1111-1111-1111-111111111116', 'VIV1-301-R1-001', 'Vivarium 1', 'Room 301', 'Rack 1', 'Cage 1', 'standard', 6, 3, 'active', '{"temperature": "68°F", "humidity": "40%"}')
+ON CONFLICT (id) DO NOTHING;
+
+-- Studies
+INSERT INTO experimental_studies (id, study_name, description, principal_investigator, status, study_type, objective, start_date, planned_end_date, iacuc_protocol_number, species_required, total_animals_planned) VALUES
+('e1111111-1111-1111-1111-111111111111', 'Cancer Treatment Efficacy Study', 'Testing novel chemotherapy compounds in mouse models', 'Dr. John Smith', 'active', 'Treatment Study', 'Evaluate efficacy of compound XYZ-123 in reducing tumor burden', '2025-01-15', '2025-12-15', 'IACUC-2025-001', 'Mus musculus', 40),
+('e1111111-1111-1111-1111-111111111112', 'Behavioral Assessment Study', 'Evaluating cognitive function in aged mice', 'Dr. Mary Johnson', 'active', 'Behavioral Study', 'Assess memory and learning in aging mouse models', '2025-02-01', '2025-08-01', 'IACUC-2025-002', 'Mus musculus', 24),
+('e1111111-1111-1111-1111-111111111113', 'Metabolic Syndrome Research', 'Diet-induced obesity and diabetes prevention', 'Dr. John Smith', 'planning', 'Metabolic Study', 'Test preventive interventions for metabolic syndrome', '2025-03-01', '2025-11-01', 'IACUC-2025-003', 'Rattus norvegicus', 32)
+ON CONFLICT (id) DO NOTHING;
+
+-- Animals
+INSERT INTO animals (id, species, strain, sex, birth_date, source, genotype, housing_id, status, availability_status, identification_method, identification_number, vendor, arrival_date, notes) VALUES
+('10000001-0000-0000-0000-000000000001', 'Mus musculus', 'C57BL/6J', 'F', '2024-12-15', 'The Jackson Laboratory', 'Wild type', 'a1111111-1111-1111-1111-111111111111', 'active', 'available', 'ear_tag', 'ET-1001', 'Jackson Labs', '2025-01-05', 'Young female'),
+('10000001-0000-0000-0000-000000000002', 'Mus musculus', 'C57BL/6J', 'M', '2024-12-15', 'The Jackson Laboratory', 'Wild type', 'a1111111-1111-1111-1111-111111111111', 'active', 'available', 'ear_tag', 'ET-1002', 'Jackson Labs', '2025-01-05', 'Young male'),
+('10000001-0000-0000-0000-000000000003', 'Mus musculus', 'C57BL/6J', 'F', '2024-11-20', 'The Jackson Laboratory', 'Wild type', 'a1111111-1111-1111-1111-111111111112', 'active', 'available', 'ear_tag', 'ET-1003', 'Jackson Labs', '2024-12-10', 'Proven breeder'),
+('10000001-0000-0000-0000-000000000004', 'Mus musculus', 'C57BL/6J', 'M', '2024-11-20', 'The Jackson Laboratory', 'Wild type', 'a1111111-1111-1111-1111-111111111112', 'active', 'available', 'ear_tag', 'ET-1004', 'Jackson Labs', '2024-12-10', 'Good temperament'),
+('10000001-0000-0000-0000-000000000005', 'Mus musculus', 'BALB/c', 'F', '2025-01-10', 'Charles River Labs', 'Wild type', 'a1111111-1111-1111-1111-111111111113', 'active', 'available', 'microchip', 'MC-1005', 'Charles River', '2025-02-01', 'Immunocompetent'),
+('10000001-0000-0000-0000-000000000006', 'Mus musculus', 'BALB/c', 'M', '2025-01-10', 'Charles River Labs', 'Wild type', 'a1111111-1111-1111-1111-111111111113', 'active', 'claimed', 'microchip', 'MC-1006', 'Charles River', '2025-02-01', 'For cancer study'),
+('10000001-0000-0000-0000-000000000007', 'Mus musculus', 'BALB/c', 'F', '2025-01-10', 'Charles River Labs', 'Wild type', 'a1111111-1111-1111-1111-111111111113', 'active', 'claimed', 'microchip', 'MC-1007', 'Charles River', '2025-02-01', 'For cancer study'),
+('10000001-0000-0000-0000-000000000008', 'Mus musculus', 'FVB/NJ', 'F', '2024-12-01', 'The Jackson Laboratory', 'Tg(MMTV-PyMT)', 'a1111111-1111-1111-1111-111111111114', 'active', 'available', 'ear_tag', 'ET-1008', 'Jackson Labs', '2025-01-15', 'PyMT transgenic'),
+('10000001-0000-0000-0000-000000000009', 'Mus musculus', 'FVB/NJ', 'M', '2024-12-01', 'The Jackson Laboratory', 'Tg(MMTV-PyMT)', 'a1111111-1111-1111-1111-111111111114', 'active', 'available', 'ear_tag', 'ET-1009', 'Jackson Labs', '2025-01-15', 'For breeding'),
+('10000001-0000-0000-0000-000000000010', 'Rattus norvegicus', 'Sprague Dawley', 'F', '2024-11-15', 'Charles River Labs', 'Wild type', 'a1111111-1111-1111-1111-111111111116', 'active', 'available', 'ear_tag', 'ET-1010', 'Charles River', '2024-12-20', 'Metabolic studies'),
+('10000001-0000-0000-0000-000000000011', 'Rattus norvegicus', 'Sprague Dawley', 'M', '2024-11-15', 'Charles River Labs', 'Wild type', 'a1111111-1111-1111-1111-111111111116', 'active', 'available', 'ear_tag', 'ET-1011', 'Charles River', '2024-12-20', 'Cardiovascular studies'),
+('10000001-0000-0000-0000-000000000012', 'Rattus norvegicus', 'Wistar', 'F', '2024-12-10', 'Envigo', 'Wild type', 'a1111111-1111-1111-1111-111111111116', 'active', 'available', 'tattoo', 'TT-1012', 'Envigo', '2025-01-12', 'Behavioral studies'),
+('10000001-0000-0000-0000-000000000013', 'Mus musculus', 'C57BL/6J', 'M', '2024-08-01', 'The Jackson Laboratory', 'Wild type', 'a1111111-1111-1111-1111-111111111115', 'active', 'breeding', 'ear_tag', 'ET-1013', 'Jackson Labs', '2024-09-01', 'Breeding male'),
+('10000001-0000-0000-0000-000000000014', 'Mus musculus', 'C57BL/6J', 'F', '2024-08-01', 'The Jackson Laboratory', 'Wild type', 'a1111111-1111-1111-1111-111111111115', 'active', 'breeding', 'ear_tag', 'ET-1014', 'Jackson Labs', '2024-09-01', 'Breeding female')
+ON CONFLICT (id) DO NOTHING;
+`;
+
+    await pool.query(demoSQL);
+
+    res.json({
+      success: true,
+      message: 'Simple demo data loaded! 14 animals, 6 housing units, 3 studies.'
+    });
+  } catch (error) {
+    logger.error('Demo data loading error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Demo data loading error',
+      error: error.message
+    });
+  }
+});
+
 // Define routes - Streamlined for Animal Research LIMS
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
