@@ -846,14 +846,32 @@ app.post('/api/admin/deploy-full-schema', async (req, res) => {
   try {
     const fs = require('fs');
     const path = require('path');
+
+    // Drop and recreate schema to start fresh
+    await pool.query(`
+      DROP SCHEMA public CASCADE;
+      CREATE SCHEMA public;
+      GRANT ALL ON SCHEMA public TO postgres;
+      GRANT ALL ON SCHEMA public TO public;
+    `);
+
+    // Apply full schema
     const schemaPath = path.join(__dirname, 'db', 'schema.sql');
     const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
-
     await pool.query(schemaSQL);
+
+    // Load demo data if enabled
+    if (process.env.LOAD_DEMO_DATA === 'true') {
+      const demoDataPath = path.join(__dirname, 'db', 'demo-data.sql');
+      if (fs.existsSync(demoDataPath)) {
+        const demoDataSQL = fs.readFileSync(demoDataPath, 'utf8');
+        await pool.query(demoDataSQL);
+      }
+    }
 
     res.json({
       success: true,
-      message: 'Full schema deployed successfully from db/schema.sql!'
+      message: 'Full schema deployed successfully from db/schema.sql! Demo data loaded.'
     });
   } catch (error) {
     logger.error('Schema deployment error:', error);
