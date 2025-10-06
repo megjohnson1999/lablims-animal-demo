@@ -826,7 +826,7 @@ app.post('/api/admin/fix-missing-schema', async (req, res) => {
     const fs = require('fs');
     const fixSchemaSQL = fs.readFileSync('./fix-missing-schema.sql', 'utf8');
     await pool.query(fixSchemaSQL);
-    
+
     res.json({
       success: true,
       message: 'Missing schema elements added successfully!'
@@ -837,6 +837,31 @@ app.post('/api/admin/fix-missing-schema', async (req, res) => {
       success: false,
       message: 'Schema fix error',
       error: error.message
+    });
+  }
+});
+
+// Admin endpoint to deploy schema from db/schema.sql
+app.post('/api/admin/deploy-full-schema', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const schemaPath = path.join(__dirname, 'db', 'schema.sql');
+    const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
+
+    await pool.query(schemaSQL);
+
+    res.json({
+      success: true,
+      message: 'Full schema deployed successfully from db/schema.sql!'
+    });
+  } catch (error) {
+    logger.error('Schema deployment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Schema deployment error',
+      error: error.message,
+      errorDetail: error.stack
     });
   }
 });
