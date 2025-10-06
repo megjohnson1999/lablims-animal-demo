@@ -872,8 +872,10 @@ CREATE TABLE public.animals (
     identification_number character varying(100),
     vendor character varying(255),
     arrival_date date,
+    availability_status character varying(20) DEFAULT 'available'::character varying,
     CONSTRAINT animals_sex_check CHECK (((sex)::text = ANY ((ARRAY['M'::character varying, 'F'::character varying, 'Unknown'::character varying])::text[]))),
-    CONSTRAINT animals_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'deceased'::character varying, 'transferred'::character varying, 'retired'::character varying])::text[])))
+    CONSTRAINT animals_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'deceased'::character varying, 'transferred'::character varying, 'retired'::character varying])::text[]))),
+    CONSTRAINT animals_availability_status_check CHECK (((availability_status)::text = ANY ((ARRAY['available'::character varying, 'claimed'::character varying, 'reserved'::character varying, 'breeding'::character varying, 'retired'::character varying, 'unavailable'::character varying])::text[])))
 );
 
 
@@ -1508,7 +1510,11 @@ CREATE TABLE public.group_treatments (
 CREATE TABLE public.housing (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     housing_number integer,
-    location character varying(100) NOT NULL,
+    location character varying(100),
+    building character varying(100),
+    room character varying(100),
+    rack character varying(100),
+    cage character varying(100),
     cage_type character varying(50),
     capacity integer DEFAULT 1,
     current_occupancy integer DEFAULT 0,
@@ -2919,6 +2925,13 @@ CREATE INDEX idx_animals_strain ON public.animals USING btree (strain);
 
 
 --
+-- Name: idx_animals_availability_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_animals_availability_status ON public.animals USING btree (availability_status);
+
+
+--
 -- Name: idx_biological_samples_anatomical_site; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3182,6 +3195,34 @@ CREATE INDEX idx_housing_location ON public.housing USING btree (location);
 --
 
 CREATE INDEX idx_housing_status ON public.housing USING btree (status);
+
+
+--
+-- Name: idx_housing_building; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_housing_building ON public.housing USING btree (building);
+
+
+--
+-- Name: idx_housing_room; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_housing_room ON public.housing USING btree (room);
+
+
+--
+-- Name: idx_housing_rack; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_housing_rack ON public.housing USING btree (rack);
+
+
+--
+-- Name: idx_housing_cage; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_housing_cage ON public.housing USING btree (cage);
 
 
 --
