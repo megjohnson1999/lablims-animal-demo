@@ -2,7 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict uyolm6th1iHNTkiABkRpCdVlnHj29WsmxUTZ3x9RDhSOxwChKeTSjVefyVIiPex
 
 -- Dumped from database version 16.10 (Homebrew)
 -- Dumped by pg_dump version 16.10 (Homebrew)
@@ -4373,5 +4372,4 @@ ALTER TABLE ONLY public.weaning_records
 -- PostgreSQL database dump complete
 --
 
-\unrestrict uyolm6th1iHNTkiABkRpCdVlnHj29WsmxUTZ3x9RDhSOxwChKeTSjVefyVIiPex
 
