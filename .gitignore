@@ -49,6 +49,7 @@ Thumbs.db
 *.sql
 !db/schema.sql
 !db/seed_demo_data.sql
+!db/rich-demo-data.sql
 !db/migrations/*.sql
 *.db
 *.sqlite

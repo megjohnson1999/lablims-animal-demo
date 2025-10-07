@@ -82,7 +82,7 @@ router.get('/check-animal-requests-tables', auth, roleCheck(['admin']), async (r
  * POST /api/admin/apply-time-series-migration
  * Apply the time series measurements database migration (admin only)
  */
-router.post('/apply-time-series-migration', auth, roleCheck(['admin']), async (req, res) => {
+router.post('/apply-time-series-migration', auth, roleCheck(['admin', 'facility_manager']), async (req, res) => {
   try {
     console.log('Starting time series measurements migration...');
 
@@ -115,7 +115,7 @@ router.post('/apply-time-series-migration', auth, roleCheck(['admin']), async (r
  * GET /api/admin/check-time-series-tables
  * Check if time series measurement tables exist (admin only)
  */
-router.get('/check-time-series-tables', auth, roleCheck(['admin']), async (req, res) => {
+router.get('/check-time-series-tables', auth, roleCheck(['admin', 'facility_manager']), async (req, res) => {
   try {
     // Check if the time series tables exist
     const tables = ['animal_measurements', 'measurement_schedules', 'measurement_types'];
@@ -160,7 +160,7 @@ router.get('/check-time-series-tables', auth, roleCheck(['admin']), async (req, 
  * POST /api/admin/apply-measurement-session-migration
  * Apply the measurement session support migration (admin only)
  */
-router.post('/apply-measurement-session-migration', auth, roleCheck(['admin']), async (req, res) => {
+router.post('/apply-measurement-session-migration', auth, roleCheck(['admin', 'facility_manager']), async (req, res) => {
   try {
     console.log('Starting measurement session support migration...');
 
