@@ -106,10 +106,11 @@ const Layout = () => {
       items: [
         { text: 'Animals', icon: <AnimalIcon />, path: '/animals' },
         { text: 'Housing', icon: <HousingIcon />, path: '/housing' },
-        { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' },
-        ...(isFacilityManager ? [
-          { text: 'Facility Manager', icon: <AdminIcon />, path: '/facility-manager' }
-        ] : [])
+        { text: 'Available Animals', icon: <SearchIcon />, path: '/animals/available' }
+        // Facility Manager dashboard temporarily disabled for demo
+        // ...(isFacilityManager ? [
+        //   { text: 'Facility Manager', icon: <AdminIcon />, path: '/facility-manager' }
+        // ] : [])
       ]
     },
     {
