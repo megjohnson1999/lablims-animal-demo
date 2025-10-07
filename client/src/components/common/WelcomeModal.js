@@ -43,7 +43,7 @@ const WelcomeModal = () => {
     {
       icon: <AnimalsIcon color="primary" />,
       title: 'Animal Inventory',
-      description: 'Browse 21 sample animals with strain and availability tracking'
+      description: 'Browse 14 sample animals with strain and availability tracking'
     },
     {
       icon: <HousingIcon color="secondary" />,
