@@ -25,20 +25,27 @@ const DemoBanner = ({ demoType = 'animal' }) => {
       severity="info"
       sx={{
         borderRadius: 0,
-        '& .MuiAlert-message': { width: '100%' }
+        bgcolor: '#0f172a',
+        color: 'white',
+        border: 'none',
+        '& .MuiAlert-message': { width: '100%' },
+        '& .MuiAlert-icon': { color: 'white' }
       }}
       icon={<Science />}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
           <Box>
-            <strong>🎯 DEMO MODE</strong> - {config.title}
+            <strong>DEMO MODE</strong> - {config.title}
           </Box>
           <Chip
             label={config.description}
             size="small"
-            color="primary"
             variant="outlined"
+            sx={{
+              borderColor: 'rgba(255,255,255,0.3)',
+              color: 'white'
+            }}
           />
         </Stack>
 
@@ -49,7 +56,15 @@ const DemoBanner = ({ demoType = 'animal' }) => {
             startIcon={<Launch />}
             href={config.otherDemoUrl}
             target="_blank"
-            sx={{ textTransform: 'none' }}
+            sx={{
+              textTransform: 'none',
+              borderColor: 'rgba(255,255,255,0.3)',
+              color: 'white',
+              '&:hover': {
+                borderColor: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)'
+              }
+            }}
           >
             {config.otherDemoLabel}
           </Button>
@@ -59,7 +74,15 @@ const DemoBanner = ({ demoType = 'animal' }) => {
             startIcon={<ContactMail />}
             href={process.env.REACT_APP_MAIN_SITE_URL || 'https://lablims.com'}
             target="_blank"
-            sx={{ textTransform: 'none' }}
+            sx={{
+              textTransform: 'none',
+              borderColor: 'rgba(255,255,255,0.3)',
+              color: 'white',
+              '&:hover': {
+                borderColor: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)'
+              }
+            }}
           >
             Learn More
           </Button>
