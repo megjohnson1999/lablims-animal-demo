@@ -52,7 +52,7 @@ const DemoWelcomeCard = ({ stats }) => {
   ];
 
   return (
-    <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+    <Card sx={{ mb: 3, background: '#0f172a', color: 'white' }}>
       <CardContent sx={{ p: 4 }}>
         <Box sx={{ mb: 3 }}>
           <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 'bold' }}>
