@@ -16,7 +16,7 @@ const db = new Pool({
  * POST /api/admin/apply-animal-requests-migration
  * Apply the animal requests database migration (admin only)
  */
-router.post('/apply-animal-requests-migration', auth, roleCheck(['admin']), async (req, res) => {
+router.post('/apply-animal-requests-migration', auth, roleCheck(['admin', 'facility_manager']), async (req, res) => {
   try {
     console.log('Starting animal requests migration...');
 
@@ -49,7 +49,7 @@ router.post('/apply-animal-requests-migration', auth, roleCheck(['admin']), asyn
  * GET /api/admin/check-animal-requests-tables
  * Check if animal requests tables exist (admin only)
  */
-router.get('/check-animal-requests-tables', auth, roleCheck(['admin']), async (req, res) => {
+router.get('/check-animal-requests-tables', auth, roleCheck(['admin', 'facility_manager']), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT table_name
