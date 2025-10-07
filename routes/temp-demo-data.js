@@ -45,4 +45,38 @@ router.post('/apply', auth, roleCheck(['admin', 'facility_manager']), async (req
   }
 });
 
+/**
+ * POST /api/temp-demo-data/complete-migration
+ * Complete the animal requests migration (create missing tables)
+ * TEMPORARY ENDPOINT - Remove after use
+ */
+router.post('/complete-migration', auth, roleCheck(['admin', 'facility_manager']), async (req, res) => {
+  try {
+    console.log('Completing animal requests migration...');
+
+    // Read the completion SQL file
+    const sqlPath = path.join(__dirname, '..', 'db', 'migrations', '002_complete_animal_requests.sql');
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+
+    // Execute the SQL
+    await pool.query(sql);
+
+    console.log('Migration completed successfully');
+
+    res.json({
+      success: true,
+      message: 'Animal requests migration completed successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Failed to complete migration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete migration',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
