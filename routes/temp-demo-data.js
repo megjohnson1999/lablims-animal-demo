@@ -79,4 +79,38 @@ router.post('/complete-migration', auth, roleCheck(['admin', 'facility_manager']
   }
 });
 
+/**
+ * POST /api/temp-demo-data/fix-table
+ * Fix animal_requests table - add missing columns
+ * TEMPORARY ENDPOINT - Remove after use
+ */
+router.post('/fix-table', auth, roleCheck(['admin', 'facility_manager']), async (req, res) => {
+  try {
+    console.log('Fixing animal_requests table...');
+
+    // Read the fix SQL file
+    const sqlPath = path.join(__dirname, '..', 'db', 'migrations', '003_fix_animal_requests_table.sql');
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+
+    // Execute the SQL
+    await pool.query(sql);
+
+    console.log('Table fixed successfully');
+
+    res.json({
+      success: true,
+      message: 'Animal requests table fixed successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Failed to fix table:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fix table',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
